@@ -76,28 +76,37 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
       const { error: signUpError, data } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: name,
+            company: company || null
+          }
+        }
       });
 
-      if (signUpError) return { error: signUpError };
-
-      // Create profile if signup was successful
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              name,
-              email,
-              company,
-            },
-          ]);
-
-        if (profileError) return { error: profileError };
+      if (signUpError) {
+        console.error('Signup error:', signUpError);
+        // Check if it's a database error
+        if (signUpError.message.includes('Database error')) {
+          console.error('Database error details:', signUpError);
+          return { 
+            error: new Error('Unable to create user profile. Please try again or contact support.') 
+          };
+        }
+        return { error: signUpError };
       }
 
+      if (!data.user) {
+        console.error('No user data returned from signup');
+        return { error: new Error('No user data returned') };
+      }
+
+      // Log successful signup
+      console.log('User created successfully:', data.user.id);
+      
       return { error: null };
     } catch (error) {
+      console.error('Unexpected error during signup:', error);
       return { error };
     }
   };

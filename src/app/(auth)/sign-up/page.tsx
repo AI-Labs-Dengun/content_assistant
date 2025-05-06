@@ -14,10 +14,10 @@ export default function SignUp() {
   const { language } = useLanguage();
   const { t } = useTranslation(language);
   
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [company, setCompany] = useState('');
+  const [full_name, setFullName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [company, setCompany] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -32,7 +32,7 @@ export default function SignUp() {
     setConfirmError(null);
     
     try {
-      const { error } = await signUp(email, password, name, company);
+      const { error } = await signUp(email, password, full_name, company);
       
       if (error) {
         setError(error.message || t('auth.signUpError'));
@@ -104,8 +104,8 @@ export default function SignUp() {
                 type="text"
                 placeholder="John Doe"
                 className="auth-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={full_name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                 required
               />
             </div>
@@ -117,8 +117,9 @@ export default function SignUp() {
                 placeholder="john@example.com"
                 className="auth-input"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
+                autoComplete="username"
               />
             </div>
             <div className="flex flex-col gap-y-1">
@@ -132,6 +133,7 @@ export default function SignUp() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="new-password"
                 />
                 <button
                   type="button"
