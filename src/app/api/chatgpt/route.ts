@@ -9,34 +9,56 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json();
+    const body = await req.json();
+    const messages = body.messages;
+    const message = body.message;
+    let language = body.language || 'en';
+    // Debug log
+    console.log('API /chatgpt received language:', language);
 
     // Read instructions and knowledge from public directory
     const instructions = await fs.readFile(path.join(process.cwd(), 'public', 'AI_INSTRUCTIONS.md'), 'utf-8');
     const knowledge = await fs.readFile(path.join(process.cwd(), 'public', 'AI_KNOWLEDGE.md'), 'utf-8');
 
-    // Create a single, comprehensive system message
-    const systemMessage = `Você é o assistente de IA da Dengun, uma Startup Studio e Agência Digital sediada em Faro, Portugal. Sua função é ajudar os visitantes a entender os serviços da Dengun e guiá-los em sua jornada de transformação digital.
+    // Language-specific system message
+    let systemMessage;
+    if (language === 'en') {
+      systemMessage = `You are a social media content assistant. Your job is to help users create engaging posts for Instagram, LinkedIn, and Facebook. Be friendly, creative, and context-aware. Always reply in English, or if the user speaks another language, reply in that language.\n\n[INSTRUCTIONS]\n${instructions}`;
+    } else if (language === 'es') {
+      systemMessage = `Eres un asistente de contenido para redes sociales. Tu trabajo es ayudar a los usuarios a crear publicaciones atractivas para Instagram, LinkedIn y Facebook. Sé amigable, creativo y consciente del contexto. Responde siempre en español, o si el usuario habla otro idioma, responde en ese idioma.\n\n[INSTRUCCIONES]\n${instructions}`;
+    } else if (language === 'fr') {
+      systemMessage = `Vous êtes un assistant de contenu pour les réseaux sociaux. Votre travail consiste à aider les utilisateurs à créer des publications engageantes pour Instagram, LinkedIn et Facebook. Soyez amical, créatif et attentif au contexte. Répondez toujours en français, ou si l'utilisateur parle une autre langue, répondez dans cette langue.\n\n[INSTRUCTIONS]\n${instructions}`;
+    } else if (language === 'de') {
+      systemMessage = `Sie sind ein Social-Media-Content-Assistent. Ihre Aufgabe ist es, den Nutzern zu helfen, ansprechende Beiträge für Instagram, LinkedIn und Facebook zu erstellen. Seien Sie freundlich, kreativ und kontextbewusst. Antworten Sie immer auf Deutsch, oder wenn der Nutzer eine andere Sprache spricht, antworten Sie in dieser Sprache.\n\n[ANWEISUNGEN]\n${instructions}`;
+    } else {
+      systemMessage = `Você é um assistente de conteúdo para redes sociais. Seu trabalho é ajudar os usuários a criar postagens envolventes para Instagram, LinkedIn e Facebook. Seja amigável, criativo e atento ao contexto. Responda sempre em português, ou se o usuário falar outro idioma, responda nesse idioma.\n\n[INSTRUÇÕES]\n${instructions}`;
+    }
 
-[INSTRUÇÕES]
-${instructions}
-
-[BASE DE CONHECIMENTO]
-${knowledge}
-
-IMPORTANTE:
-- Responda sempre em português
-- Seja criativo e original em suas respostas
-- Use o tom e estilo definidos nas instruções
-- Incorpore informações relevantes da base de conhecimento
-- Nunca copie exemplos diretamente das instruções`;
+    let openaiMessages;
+    if (Array.isArray(messages)) {
+      // Insert our system message at the start if not already present
+      if (!messages[0] || messages[0].role !== 'system') {
+        openaiMessages = [
+          { role: 'system', content: systemMessage },
+          ...messages
+        ];
+      } else {
+        // Replace the system message with our own
+        openaiMessages = [
+          { role: 'system', content: systemMessage },
+          ...messages.slice(1)
+        ];
+      }
+    } else {
+      openaiMessages = [
+        { role: 'system', content: systemMessage },
+        { role: 'user', content: message }
+      ];
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemMessage },
-        { role: "user", content: message }
-      ],
+      messages: openaiMessages,
       temperature: 0.8,
       max_tokens: 1000,
     });

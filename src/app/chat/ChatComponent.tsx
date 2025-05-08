@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation';
 import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
 import { useTheme } from '../providers/ThemeProvider';
-import { useLanguage } from '../../lib/language';
+import { useLanguage } from '../../lib/LanguageContext';
 import { useTranslation, Language } from '../../lib/i18n';
 import TypewriterEffect from '../../components/TypewriterEffect';
 import CommentModal from '../../components/CommentModal';
 import VoiceModal from '../../components/VoiceModal';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
+import ReactModal from 'react-modal';
+const Modal: any = ReactModal;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ReactMarkdown = require('react-markdown').default;
 
@@ -23,6 +25,7 @@ interface Message {
   content: string;
   user: 'me' | 'bot';
   created_at: string;
+  image?: string;
 }
 
 const languageNames: Record<string, string> = {
@@ -63,6 +66,11 @@ const ChatComponent = () => {
   const [showTooltipsModal, setShowTooltipsModal] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [postTopic, setPostTopic] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageDescription, setImageDescription] = useState<string | null>(null);
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
@@ -111,7 +119,7 @@ const ChatComponent = () => {
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: greetingPrompt }),
+            body: JSON.stringify({ message: greetingPrompt, language }),
           });
           const data = await res.json();
           setMessages([
@@ -216,6 +224,17 @@ const ChatComponent = () => {
     return platforms.find((p) => lower.includes(p)) || null;
   };
 
+  const extractTopic = (text: string, platform: string | null): string | null => {
+    if (!text) return null;
+    let topic = text;
+    if (platform) {
+      topic = topic.replace(new RegExp(platform, 'i'), '').trim();
+    }
+    topic = topic.replace(/^(escreva|escreve|write|crie|create|haz|fais|erstelle|schreibe|make|generate|génère|genera|criar|ajuda|help|sobre|about|para|for|pour|für)\s*/i, '').trim();
+    if (topic.length > 2) return topic;
+    return null;
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     handleFirstInteraction();
@@ -230,7 +249,6 @@ const ChatComponent = () => {
     setNewMessage('');
     setLoading(true);
 
-    // Extract platform and topic from the new message
     let platform = selectedPlatform || extractPlatform(newMessage);
     let topic = postTopic;
     if (!platform) {
@@ -238,19 +256,31 @@ const ChatComponent = () => {
     } else {
       setSelectedPlatform(platform);
     }
-    if (!topic && platform && !extractPlatform(newMessage)) {
-      topic = newMessage;
+
+    const extractedTopic = extractTopic(newMessage, platform);
+    if (platform && extractedTopic) {
+      topic = extractedTopic;
       setPostTopic(topic);
     }
 
-    // If both platform and topic are present, generate the post
-    if (platform && topic) {
-      const prompt = `Create a complete, ready-to-use post for ${platform} about "${topic}". Use the best practices and criteria from the knowledge base for formatting, tone, hashtags, and calls-to-action. Do not explain the topic, just generate the post as if the user will copy and paste it to their social media. If you have any extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'.`;
+    if (imageDescription && platform && (!topic || topic === imageDescription) && (!newMessage.trim() || extractPlatform(newMessage))) {
+      topic = imageDescription;
+      setPostTopic(topic);
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const openaiMessages = [
+        { role: 'system', content: prompt },
+        ...messages.map((msg) => ({
+          role: msg.user === 'me' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: `The user uploaded an image. Here is the description: "${imageDescription}". Use this as the topic/content for the post.` },
+        { role: 'user', content: newMessage }
+      ];
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: prompt }),
+          body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
         if (data.reply && data.reply.includes('Tips:')) {
@@ -281,6 +311,7 @@ const ChatComponent = () => {
             },
           ]);
         }
+        setImageDescription(null);
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -297,28 +328,52 @@ const ChatComponent = () => {
       return;
     }
 
-    // If only platform is present, ask for the topic
-    if (platform && !topic) {
-      setSelectedPlatform(platform);
-      setPostTopic(null);
-      // Dynamically generate the follow-up question using the AI
-      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+    if (platform && topic) {
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const openaiMessages = [
+        { role: 'system', content: prompt },
+        ...messages.map((msg) => ({
+          role: msg.user === 'me' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: newMessage }
+      ];
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt }),
+          body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
+        if (data.reply && data.reply.includes('Tips:')) {
+          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: mainPost.trim(),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'bot-' + (Date.now() + 1),
+              content: 'Tips:' + tipsParts.join('Tips:').trim(),
+              user: 'bot',
+              created_at: new Date(Date.now() + 1).toISOString(),
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+        setImageDescription(null);
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -335,16 +390,52 @@ const ChatComponent = () => {
       return;
     }
 
-    // If only topic is present, ask for the platform
+    if (platform && !topic) {
+      setSelectedPlatform(platform);
+      setPostTopic(null);
+      if (!extractedTopic) {
+        const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+        try {
+          const res = await fetch('/api/chatgpt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: followupPrompt, language }),
+          });
+          const data = await res.json();
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        } catch (err) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-error-' + Date.now(),
+              content: t('common.error'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        } finally {
+          setLoading(false);
+        }
+      }
+      return;
+    }
+
     if (!platform && newMessage.trim()) {
       setPostTopic(newMessage);
-      // Dynamically generate the follow-up question using the AI
       const followupPrompt = `The user wants to create a post about "${newMessage}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt }),
+          body: JSON.stringify({ message: followupPrompt, language }),
         });
         const data = await res.json();
         setMessages((prev) => [
@@ -533,7 +624,6 @@ const ChatComponent = () => {
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
 
-    // Extract platform and topic from the tooltip
     let platform = selectedPlatform || extractPlatform(tooltip);
     let topic = postTopic;
     if (!platform) {
@@ -546,14 +636,21 @@ const ChatComponent = () => {
       setPostTopic(topic);
     }
 
-    // If both platform and topic are present, generate the post
     if (platform && topic) {
-      const prompt = `Create a complete, ready-to-use post for ${platform} about "${topic}". Use the best practices and criteria from the knowledge base for formatting, tone, hashtags, and calls-to-action. Do not explain the topic, just generate the post as if the user will copy and paste it to their social media. If you have any extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'.`;
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const openaiMessages = [
+        { role: 'system', content: prompt },
+        ...messages.map((msg) => ({
+          role: msg.user === 'me' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: tooltip }
+      ];
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: prompt }),
+          body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
         if (data.reply && data.reply.includes('Tips:')) {
@@ -600,17 +697,15 @@ const ChatComponent = () => {
       return;
     }
 
-    // If only platform is present, ask for the topic
     if (platform && !topic) {
       setSelectedPlatform(platform);
       setPostTopic(null);
-      // Dynamically generate the follow-up question using the AI
       const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt }),
+          body: JSON.stringify({ message: followupPrompt, language }),
         });
         const data = await res.json();
         setMessages((prev) => [
@@ -638,16 +733,14 @@ const ChatComponent = () => {
       return;
     }
 
-    // If only topic is present, ask for the platform
     if (!platform && tooltip.trim()) {
       setPostTopic(tooltip);
-      // Dynamically generate the follow-up question using the AI
       const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt }),
+          body: JSON.stringify({ message: followupPrompt, language }),
         });
         const data = await res.json();
         setMessages((prev) => [
@@ -681,6 +774,7 @@ const ChatComponent = () => {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
+      formData.append('language', language);
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
@@ -700,7 +794,7 @@ const ChatComponent = () => {
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: data.text }),
+            body: JSON.stringify({ message: data.text, language }),
           });
           const aiData = await res.json();
           setMessages((prev) => [
@@ -739,6 +833,210 @@ const ChatComponent = () => {
     } catch (err) {
       console.error('Transcription error:', err);
       setVoiceModalMode('ready-to-record');
+    }
+  };
+
+  const handlePaperclipClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleImageButtonClick = () => {
+    setImageModalOpen(true);
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setUploadedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      setUploadedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleImageModalClose = () => {
+    setImageModalOpen(false);
+    setUploadedImage(null);
+    setImagePreview(null);
+  };
+
+  const handleImageConfirm = async () => {
+    if (!uploadedImage) return;
+    setLoading(true);
+    setImageModalOpen(false);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: 'user-img-' + Date.now(),
+        content: '',
+        user: 'me',
+        created_at: new Date().toISOString(),
+        image: imagePreview,
+      } as any,
+    ]);
+
+    let description = '';
+    try {
+      console.log('Sending image for analysis...');
+      const formData = new FormData();
+      formData.append('image', uploadedImage);
+      formData.append('language', language);
+      const res = await fetch('/api/analyze-image', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        console.error('Image analysis failed:', {
+          status: res.status,
+          statusText: res.statusText,
+          error: data.error,
+          details: data.details
+        });
+        throw new Error(data.error || 'Failed to analyze image');
+      }
+      
+      if (!data.description) {
+        console.error('No description in response:', data);
+        throw new Error('No description received from image analysis');
+      }
+      
+      description = data.description;
+      setImageDescription(description);
+      console.log('Image analysis successful');
+    } catch (err) {
+      console.error('Image analysis error:', err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: 'bot-error-' + Date.now(),
+          content: err instanceof Error ? err.message : t('common.error'),
+          user: 'bot',
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setLoading(false);
+      setUploadedImage(null);
+      setImagePreview(null);
+      return;
+    }
+
+    if (selectedPlatform) {
+      const prompt = `Create a social media post for ${selectedPlatform} based on this image (description: ${description}). Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying. Use a vertical, block-style layout.`;
+      try {
+        console.log('Generating post for platform:', selectedPlatform);
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: prompt, language }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          console.error('Post generation failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            error: data.error,
+            details: data.details
+          });
+          throw new Error(data.error || 'Failed to generate post');
+        }
+        
+        if (!data.reply) {
+          console.error('No reply in response:', data);
+          throw new Error('No response received from AI');
+        }
+        
+        console.log('Post generation successful');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply,
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+        setImageDescription(null);
+      } catch (err) {
+        console.error('AI response error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: err instanceof Error ? err.message : t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        setUploadedImage(null);
+        setImagePreview(null);
+      }
+    } else {
+      const followupPrompt = `The user uploaded an image (description: ${description}). Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        console.log('Generating platform question...');
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          console.error('Question generation failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            error: data.error,
+            details: data.details
+          });
+          throw new Error(data.error || 'Failed to generate follow-up question');
+        }
+        
+        if (!data.reply) {
+          console.error('No reply in response:', data);
+          throw new Error('No response received from AI');
+        }
+        
+        console.log('Question generation successful');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply,
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        console.error('AI response error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: err instanceof Error ? err.message : t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        setUploadedImage(null);
+        setImagePreview(null);
+      }
     }
   };
 
@@ -813,23 +1111,17 @@ const ChatComponent = () => {
                     className={`rounded-xl px-5 py-3 pb-6 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
                     <div className="flex flex-col gap-2 mb-4">
+                      {msg.user === 'me' && msg.image ? (
+                        <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2" />
+                      ) : null}
                       {msg.user === 'bot' ? (
                         <ReactMarkdown
                           components={{
                             p({node, children, ...props}: any) {
-                              if (
-                                node.position?.start.line === 1 &&
-                                (String(children).startsWith('**') || String(children).startsWith('#'))
-                              ) {
-                                return <div className="font-bold text-lg mb-2">{children}</div>;
-                              }
                               return <p {...props}>{children}</p>;
                             },
                             strong({node, children, ...props}: any) {
-                              if (node.position?.start.line === 1) {
-                                return <div className="font-bold text-lg mb-2">{children}</div>;
-                              }
-                              return <strong {...props}>{children}</strong>;
+                              return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
                             },
                             h1({children, ...props}: any) {
                               return <div className="font-bold text-xl mb-2">{children}</div>;
@@ -1005,6 +1297,26 @@ const ChatComponent = () => {
               >
                 <FaMicrophone />
               </button>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+              />
+              <button
+                type="button"
+                className="text-xl text-white hover:text-gray-200 ml-2"
+                onClick={handleImageButtonClick}
+                title="Upload Image"
+                disabled={loading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5z" />
+                  <circle cx="8.25" cy="9.75" r="1.25" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.5l-5.25-5.25a2.25 2.25 0 00-3.182 0L3 21" />
+                </svg>
+              </button>
             </div>
             {showEmojiPicker && (
               <div className="absolute bottom-12 left-0 z-50">
@@ -1037,6 +1349,44 @@ const ChatComponent = () => {
         mode={voiceModalMode}
         onToggleRecord={handleToggleRecord}
       />
+      <Modal
+        isOpen={imageModalOpen}
+        onRequestClose={handleImageModalClose}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black/60 z-40"
+        ariaHideApp={false}
+      >
+        <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md">
+          <h2 className="text-lg font-bold mb-2 text-gray-800">Upload Image</h2>
+          <div
+            className="w-full h-40 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer bg-gray-50"
+            onDrop={handleImageDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {imagePreview ? (
+              <img src={imagePreview} alt="Preview" className="max-h-36 max-w-full object-contain" />
+            ) : (
+              <span className="text-gray-400">Drag & drop or click to select an image</span>
+            )}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
+              onClick={handleImageConfirm}
+              disabled={!uploadedImage}
+            >
+              Confirm
+            </button>
+            <button
+              className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400"
+              onClick={handleImageModalClose}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
