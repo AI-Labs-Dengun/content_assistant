@@ -22,6 +22,7 @@
     "comment": "Kommentieren",
     "greeting": "Hallo! Wie kann ich Ihnen heute helfen?",
     "greetingLoading": "Begrüßung wird geladen...",
+    "fallback": "Entschuldigung, ich habe das nicht verstanden. Können Sie Ihre Anfrage umformulieren?",
     "voiceMode": {
       "idle": "Sprachmodus",
       "recording": "Aufnahme...",
@@ -29,14 +30,14 @@
     },
     "assistantTitle": "KI-Assistent",
     "tooltips": [
-      "Wie kann ich mein Startup skalieren?",
-      "Ich brauche ein MVP für meine Idee",
-      "Ich möchte mein SEO und digitales Marketing verbessern",
-      "Ich brauche eine Website für mein Unternehmen",
-      "Wie kann ich meine Online-Präsenz optimieren?",
-      "Ich möchte eine mobile App entwickeln",
-      "Ich brauche Hilfe bei der Datenanalyse",
-      "Wie kann KI meinem Unternehmen helfen?"
+      "Erstellen Sie einen Post für einen Produkt-Launch auf Instagram",
+      "Schreiben Sie einen Post über unsere Dienstleistungen für LinkedIn",
+      "Erstellen Sie einen ansprechenden Post über eine neue Funktion für Facebook",
+      "Schreiben Sie einen Werbepost für eine Veranstaltung auf Instagram",
+      "Erstellen Sie einen Unternehmensankündigungs-Post für LinkedIn",
+      "Schreiben Sie einen Team-Spotlight-Post für Instagram",
+      "Erstellen Sie einen Kundenbewertungs-Post für Facebook",
+      "Schreiben Sie einen Thought-Leadership-Post für LinkedIn"
     ]
   },
   "settings": {

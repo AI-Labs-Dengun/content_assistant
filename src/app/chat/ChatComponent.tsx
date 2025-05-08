@@ -11,6 +11,8 @@ import CommentModal from '../../components/CommentModal';
 import VoiceModal from '../../components/VoiceModal';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const ReactMarkdown = require('react-markdown').default;
 
 const EmojiPicker = dynamic(() => import('@emoji-mart/react'), {
   ssr: false
@@ -59,6 +61,8 @@ const ChatComponent = () => {
   const [tooltips, setTooltips] = useState<string[]>([]);
   const [showTooltips, setShowTooltips] = useState(true);
   const [showTooltipsModal, setShowTooltipsModal] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+  const [postTopic, setPostTopic] = useState<string | null>(null);
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
@@ -86,8 +90,14 @@ const ChatComponent = () => {
     }
   }, [messages]);
 
+  const resetConversationState = () => {
+    setSelectedPlatform(null);
+    setPostTopic(null);
+  };
+
   useEffect(() => {
     if (messages.length === 0) {
+      resetConversationState();
       setGreetingLoading(true);
       (async () => {
         try {
@@ -97,7 +107,7 @@ const ChatComponent = () => {
           ]);
           const instructionsText = await instructionsRes.text();
           const knowledgeText = await knowledgeRes.text();
-          const greetingPrompt = `Generate a creative, warm, and original greeting for a new user in ${language}. Use the INSTRUCTIONS to define the tone and style of the message, and the KNOWLEDGE BASE to incorporate specific information about Dengun and its services. Be original and do not copy any examples from the instructions. The greeting should reflect Dengun's professional and welcoming personality, mentioning some of the main services and inviting the user to explore how we can help. Keep your answer very short (1-2 sentences).`;
+          const greetingPrompt = `Generate a creative, warm, and original greeting for a new user in ${language}. Use the INSTRUCTIONS to define the tone and style of the message. The greeting should be professional and welcoming, introducing yourself as a social media content assistant that can help generate posts for Instagram, LinkedIn, or Facebook. Keep your answer very short (1-2 sentences).`;
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -200,6 +210,12 @@ const ChatComponent = () => {
     }
   };
 
+  const extractPlatform = (text: string): string | null => {
+    const platforms = ['instagram', 'linkedin', 'facebook'];
+    const lower = text.toLowerCase();
+    return platforms.find((p) => lower.includes(p)) || null;
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     handleFirstInteraction();
@@ -213,35 +229,147 @@ const ChatComponent = () => {
     setMessages((prev) => [...prev, userMsg]);
     setNewMessage('');
     setLoading(true);
-    const prompt = `${newMessage}\n\nPlease answer ONLY in ${languageNames[language] || 'English'}, regardless of the language of the question. Do not mention language or your ability to assist in other languages. Keep your answer short and concise.`;
-    try {
-      const res = await fetch('/api/chatgpt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: prompt }),
-      });
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-' + Date.now(),
-          content: data.reply || t('chat.greeting'),
-          user: 'bot',
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-error-' + Date.now(),
-          content: t('common.error'),
-          user: 'bot',
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setLoading(false);
+
+    // Extract platform and topic from the new message
+    let platform = selectedPlatform || extractPlatform(newMessage);
+    let topic = postTopic;
+    if (!platform) {
+      setSelectedPlatform(null);
+    } else {
+      setSelectedPlatform(platform);
+    }
+    if (!topic && platform && !extractPlatform(newMessage)) {
+      topic = newMessage;
+      setPostTopic(topic);
+    }
+
+    // If both platform and topic are present, generate the post
+    if (platform && topic) {
+      const prompt = `Create a complete, ready-to-use post for ${platform} about "${topic}". Use the best practices and criteria from the knowledge base for formatting, tone, hashtags, and calls-to-action. Do not explain the topic, just generate the post as if the user will copy and paste it to their social media. If you have any extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: prompt }),
+        });
+        const data = await res.json();
+        if (data.reply && data.reply.includes('Tips:')) {
+          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: mainPost.trim(),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'bot-' + (Date.now() + 1),
+              content: 'Tips:' + tipsParts.join('Tips:').trim(),
+              user: 'bot',
+              created_at: new Date(Date.now() + 1).toISOString(),
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // If only platform is present, ask for the topic
+    if (platform && !topic) {
+      setSelectedPlatform(platform);
+      setPostTopic(null);
+      // Dynamically generate the follow-up question using the AI
+      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // If only topic is present, ask for the platform
+    if (!platform && newMessage.trim()) {
+      setPostTopic(newMessage);
+      // Dynamically generate the follow-up question using the AI
+      const followupPrompt = `The user wants to create a post about "${newMessage}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
   };
 
@@ -404,35 +532,147 @@ const ChatComponent = () => {
     };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
-    const prompt = `${tooltip}\n\nPlease answer ONLY in ${languageNames[language] || 'English'}, regardless of the language of the question. Do not mention language or your ability to assist in other languages. Keep your answer short and concise.`;
-    try {
-      const res = await fetch('/api/chatgpt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: prompt }),
-      });
-      const data = await res.json();
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-' + Date.now(),
-          content: data.reply || t('chat.greeting'),
-          user: 'bot',
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'bot-error-' + Date.now(),
-          content: t('common.error'),
-          user: 'bot',
-          created_at: new Date().toISOString(),
-        },
-      ]);
-    } finally {
-      setLoading(false);
+
+    // Extract platform and topic from the tooltip
+    let platform = selectedPlatform || extractPlatform(tooltip);
+    let topic = postTopic;
+    if (!platform) {
+      setSelectedPlatform(null);
+    } else {
+      setSelectedPlatform(platform);
+    }
+    if (!topic && platform && !extractPlatform(tooltip)) {
+      topic = tooltip;
+      setPostTopic(topic);
+    }
+
+    // If both platform and topic are present, generate the post
+    if (platform && topic) {
+      const prompt = `Create a complete, ready-to-use post for ${platform} about "${topic}". Use the best practices and criteria from the knowledge base for formatting, tone, hashtags, and calls-to-action. Do not explain the topic, just generate the post as if the user will copy and paste it to their social media. If you have any extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: prompt }),
+        });
+        const data = await res.json();
+        if (data.reply && data.reply.includes('Tips:')) {
+          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: mainPost.trim(),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'bot-' + (Date.now() + 1),
+              content: 'Tips:' + tipsParts.join('Tips:').trim(),
+              user: 'bot',
+              created_at: new Date(Date.now() + 1).toISOString(),
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // If only platform is present, ask for the topic
+    if (platform && !topic) {
+      setSelectedPlatform(platform);
+      setPostTopic(null);
+      // Dynamically generate the follow-up question using the AI
+      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // If only topic is present, ask for the platform
+    if (!platform && tooltip.trim()) {
+      setPostTopic(tooltip);
+      // Dynamically generate the follow-up question using the AI
+      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
     }
   };
 
@@ -570,15 +810,37 @@ const ChatComponent = () => {
                     </div>
                   )}
                   <div
-                    className={`rounded-xl px-5 py-3 pb-6 border-[0.5px] border-white text-white bg-transparent max-w-[90%] md:max-w-[70%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl px-5 py-3 pb-6 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'bot' ? (
-                        <TypewriterEffect
-                          text={msg.content}
-                          speed={50}
-                          delay={100}
-                        />
+                        <ReactMarkdown
+                          components={{
+                            p({node, children, ...props}: any) {
+                              if (
+                                node.position?.start.line === 1 &&
+                                (String(children).startsWith('**') || String(children).startsWith('#'))
+                              ) {
+                                return <div className="font-bold text-lg mb-2">{children}</div>;
+                              }
+                              return <p {...props}>{children}</p>;
+                            },
+                            strong({node, children, ...props}: any) {
+                              if (node.position?.start.line === 1) {
+                                return <div className="font-bold text-lg mb-2">{children}</div>;
+                              }
+                              return <strong {...props}>{children}</strong>;
+                            },
+                            h1({children, ...props}: any) {
+                              return <div className="font-bold text-xl mb-2">{children}</div>;
+                            },
+                            h2({children, ...props}: any) {
+                              return <div className="font-bold text-lg mb-2">{children}</div>;
+                            },
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
                       ) : (
                         <span>{msg.content}</span>
                       )}

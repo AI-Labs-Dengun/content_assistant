@@ -1,115 +1,75 @@
-# Dengun Knowledge Base
+# Social Media Best Practices
 
-Dengun is a Startup Studio and Digital Agency established in 2009, headquartered in Faro, Portugal. The company specializes in transforming innovative ideas into scalable digital products and offers a comprehensive suite of services to support businesses at various stages of growth.
+## INSTAGRAM POST CRITERIA
+- **Image Quality:**
+  - High-resolution images (minimum 1080x1080 pixels)
+  - Well-lit and clear photos
+  - Consistent color scheme and filters
+  - Professional-looking visuals
 
-## STARTUP STUDIO SERVICES
+- **Content Guidelines:**
+  - Caption length: 125-150 characters optimal
+  - Use relevant hashtags (5-10 per post)
+  - Include a clear call-to-action
+  - Use emojis strategically
+  - Keep text concise and engaging
 
-### 1. Idea Refinement and Investment
-- Ideation and validation
-- Brand co-creation
-- Pitch deck development
-- Market opportunity and competitive intelligence analysis
-- Digital presence and growth strategies, including web development and digital marketing
+- **Best Practices:**
+  - Post during peak hours (11 AM - 3 PM)
+  - Use Stories for behind-the-scenes content
+  - Include location tags when relevant
+  - Engage with followers in comments
+  - Use carousel posts for multiple images
 
-### 2. Discovery Tech
-- MVP discovery with software development and architecture definition
-- Scalability roadmaps with estimates
+## LINKEDIN POST CRITERIA
+- **Content Structure:**
+  - Professional tone
+  - Clear headline
+  - 3-4 paragraphs maximum
+  - Include relevant statistics or data
+  - End with a thought-provoking question
 
-### 3. Product UX/UI Design
-- Design sprints
-- Wireframing
-- Prototyping (low and high fidelity)
-- Proof of concept
-- Minimum viable product (MVP) development and enhancement
+- **Best Practices:**
+  - Post during business hours (8 AM - 5 PM)
+  - Use bullet points for readability
+  - Include relevant industry hashtags
+  - Tag relevant people or companies
+  - Share industry insights and expertise
 
-### 4. Product Development
-- Proof of concept creation
-- MVP development
-- Web and mobile app development
-- E-commerce and marketplace solutions
+- **Engagement Tips:**
+  - Encourage professional discussion
+  - Respond to comments promptly
+  - Share company achievements
+  - Post industry news and analysis
+  - Include relevant links
 
-### 5. Growth Marketing
-- Marketing and growth strategy planning
-- Website design, development, and ongoing support
-- Digital marketing
-- Data-driven strategies
+## FACEBOOK POST CRITERIA
+- **Content Guidelines:**
+  - Conversational tone
+  - 40-80 characters for optimal engagement
+  - Include visual content (images/videos)
+  - Use Facebook-specific features (polls, events)
 
-## DIGITAL AGENCY SERVICES
+- **Best Practices:**
+  - Post during peak hours (1 PM - 4 PM)
+  - Use Facebook Live for important updates
+  - Create shareable content
+  - Include clear call-to-action
+  - Engage with community in comments
 
-### 1. Strategy
-- Digital footprint audit
-- Digital consulting
-- Website and SEO audit
-- Website architecture planning
-- Project management
+- **Engagement Tips:**
+  - Respond to comments within 24 hours
+  - Use Facebook Groups for community building
+  - Share user-generated content
+  - Post a mix of content types
+  - Use Facebook Insights to track performance
 
-### 2. Design
-- Research and briefing
-- Brand strategy
-- Wireframing
-- Responsive design
-- UI/UX design
-
-### 3. Web Development
-- Website creation and support
-- Technology consulting
-- Core web vitals optimization
-- ADA compliance
-- Hosting services
-- Quality assurance
-
-### 4. Digital Marketing
-- Consulting
-- Conversion rate optimization (CRO)
-- Search engine optimization (SEO)
-- Google Ads management
-- Social media marketing
-- Email marketing
-- App store optimization (ASO)
-- Influencer marketing
-- Google Analytics 4 implementation
-- Account-based marketing
-- Real estate marketing
-
-### 5. Content
-- Content strategy
-- Creative brainstorming
-- Photography
-- Videography
-- Illustration and 3D design
-
-### 6. Data
-- Data analysis and reporting
-- Performance modeling
-- Analytics and measurement
-- Web tracking
-
-### 7. AI Solutions
-- AI website design and development
-- AI-powered precision persona engagement
-- Automated pay-per-click marketing campaigns
-- Marketing game plan development
-
-## NOTABLE PROJECTS
-
-- **Triller:** Dengun assisted in scaling Triller's infrastructure, contributing to its growth from 10 million to 65 million users.
-- **Other projects:** 15Five, Vote_in_or_out, Coolkicks, Big_Room.
-
-## CLIENTELE
-
-Dengun has partnered with clients across multiple industries, including real estate, hospitality, healthcare, wellness, e-commerce, and retail.
-
-## TEAM AND CULTURE
-
-The company comprises a diverse team of over 80 professionals, including engineers, designers, and marketers, committed to delivering innovative solutions.
-
-## CONTACT INFORMATION
-
-- **Digital Agency Office:** Rua Ascensão Guimarães, 25, 8004-038 Faro, Portugal
-- **Startup Studio Office:** UALG TEC CAMPUS, 23-25, 8005-139 Faro, Portugal
-- **Phone:** +351 289 096 654 (Information), +351 913 250 288 (Support)
-- **Email:** info@dengun.com
-
-## ONLINE PRESENCE
-
-- **Website:** https://www.dengun.com/ 
+## GENERAL POSTING TIPS
+- Maintain consistent brand voice
+- Use platform-specific features
+- Include relevant hashtags
+- Engage with audience
+- Monitor analytics
+- Post regularly
+- Use high-quality visuals
+- Include clear calls-to-action 

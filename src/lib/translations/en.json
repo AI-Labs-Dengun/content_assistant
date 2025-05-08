@@ -22,6 +22,7 @@
     "comment": "Comment",
     "greeting": "Hello! How can I help you today?",
     "greetingLoading": "Loading greeting...",
+    "fallback": "Sorry, I didn't understand. Could you rephrase your request?",
     "voiceMode": {
       "idle": "Voice Mode",
       "recording": "Recording...",
@@ -29,14 +30,14 @@
     },
     "assistantTitle": "AI Assistant",
     "tooltips": [
-      "How can I scale my startup?",
-      "I need an MVP for my idea",
-      "I want to improve my SEO and digital marketing",
-      "I need a website for my business",
-      "How can I optimize my online presence?",
-      "I want to develop a mobile app",
-      "I need help with data analysis",
-      "How can AI help my business?"
+      "Create a post for a product launch on Instagram",
+      "Write a post about our services for LinkedIn",
+      "Create an engaging post for a new feature on Facebook",
+      "Write a promotional post for an upcoming event on Instagram",
+      "Create a company announcement post for LinkedIn",
+      "Write a team spotlight post for Instagram",
+      "Create a customer testimonial post for Facebook",
+      "Write a thought leadership post for LinkedIn"
     ]
   },
   "settings": {

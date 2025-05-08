@@ -22,8 +22,8 @@
     "react-typewriter-effect": "^1.1.0"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "@types/react": "^18.2.0",
+    "@types/node": "20.17.45",
+    "@types/react": "18.3.21",
     "@types/react-dom": "^18.2.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^8.56.0",
@@ -31,6 +31,6 @@
     "postcss": "^8.5.3",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.3.3"
+    "typescript": "5.8.3"
   }
 }

@@ -22,6 +22,7 @@
     "comment": "Commenter",
     "greeting": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
     "greetingLoading": "Chargement de la salutation...",
+    "fallback": "Désolé, je n'ai pas compris. Pouvez-vous reformuler votre demande ?",
     "voiceMode": {
       "idle": "Mode Vocal",
       "recording": "Enregistrement...",
@@ -29,14 +30,14 @@
     },
     "assistantTitle": "Assistant IA",
     "tooltips": [
-      "Comment puis-je développer ma startup ?",
-      "J'ai besoin d'un MVP pour mon idée",
-      "Je veux améliorer mon SEO et mon marketing digital",
-      "J'ai besoin d'un site web pour mon entreprise",
-      "Comment puis-je optimiser ma présence en ligne ?",
-      "Je veux développer une application mobile",
-      "J'ai besoin d'aide pour l'analyse de données",
-      "Comment l'IA peut-elle aider mon entreprise ?"
+      "Créer un post de lancement de produit pour Instagram",
+      "Écrire un post sur nos services pour LinkedIn",
+      "Créer un post engageant sur une nouvelle fonctionnalité pour Facebook",
+      "Écrire un post promotionnel pour un événement sur Instagram",
+      "Créer un post d'annonce d'entreprise pour LinkedIn",
+      "Écrire un post mettant en avant l'équipe pour Instagram",
+      "Créer un post de témoignage client pour Facebook",
+      "Écrire un post de leadership d'opinion pour LinkedIn"
     ]
   },
   "settings": {
