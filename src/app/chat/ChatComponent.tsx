@@ -1087,7 +1087,7 @@ const ChatComponent = () => {
   return (
     <div className="bg-auth-gradient min-h-screen flex items-center justify-center">
       <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-white/30">
-        <header className="p-3 flex justify-between items-center relative border-b border-white/20">
+        <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-white/20">
           <h1 className="text-2xl font-bold text-white drop-shadow">{t('chat.assistantTitle') || 'Assistente IA'}</h1>
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -1154,7 +1154,7 @@ const ChatComponent = () => {
                     </div>
                   )}
                   <div
-                    className={`rounded-xl px-5 py-3 pb-6 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
                     <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'me' && msg.image ? (
@@ -1183,7 +1183,7 @@ const ChatComponent = () => {
                         <span>{msg.content}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-5 pb-1 pt-3 relative justify-between">
+                    <div className="flex items-center gap-2 mt-5 pb-1 relative justify-between">
                       <div className="flex items-center gap-2">
                         {msg.user === 'bot' && (
                           <>
@@ -1234,7 +1234,7 @@ const ChatComponent = () => {
         </main>
         {showTooltips && tooltips.length > 0 && (
           <div className="w-full px-6">
-            <div className="w-full border-t border-white/30 mb-2" />
+            <div className="w-full border-t border-white/30 mb-4" />
             <div className="flex flex-col gap-2 mb-2 items-center w-full md:hidden">
               <button
                 className="w-full flex-1 px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors text-center"
@@ -1402,36 +1402,98 @@ const ChatComponent = () => {
         isOpen={imageModalOpen}
         onRequestClose={handleImageModalClose}
         className="fixed inset-0 flex items-center justify-center z-50"
-        overlayClassName="fixed inset-0 bg-black/60 z-40"
+        overlayClassName="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer"
         ariaHideApp={false}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        closeTimeoutMS={200}
+        onOverlayClick={handleImageModalClose}
+        overlayElement={(props: React.HTMLAttributes<HTMLDivElement>, contentElement: React.ReactNode) => (
+          <div {...props} onClick={handleImageModalClose}>
+            {contentElement}
+          </div>
+        )}
       >
-        <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md">
-          <h2 className="text-lg font-bold mb-2 text-gray-800">Upload Image</h2>
+        <div 
+          className="bg-auth-gradient rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-white/30 shadow-2xl transform transition-all duration-200 ease-in-out"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center w-full mb-2">
+            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.uploadImage') || 'Upload de Imagem'}</h2>
+            <button
+              onClick={handleImageModalClose}
+              className="text-white/70 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+              aria-label={t('common.cancel') || 'Fechar'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <div
-            className="w-full h-40 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer bg-gray-50"
+            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${
+              imagePreview 
+                ? 'border-white/30 bg-white/5' 
+                : 'border-white/30 bg-white/5 hover:bg-white/10'
+            }`}
             onDrop={handleImageDrop}
             onDragOver={e => e.preventDefault()}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
           >
             {imagePreview ? (
-              <img src={imagePreview} alt="Preview" className="max-h-36 max-w-full object-contain" />
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  className="max-h-44 max-w-full object-contain rounded-lg" 
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUploadedImage(null);
+                    setImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+                  aria-label={t('common.delete') || 'Remover imagem'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ) : (
-              <span className="text-gray-400">Drag & drop or click to select an image</span>
+              <div className="flex flex-col items-center gap-2 text-white/70">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5z" />
+                  <circle cx="8.25" cy="9.75" r="1.25" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.5l-5.25-5.25a2.25 2.25 0 00-3.182 0L3 21" />
+                </svg>
+                <span className="text-center px-4">{t('chat.dragAndDropImage') || 'Arraste e solte ou clique para selecionar uma imagem'}</span>
+              </div>
             )}
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-3 mt-4 w-full">
             <button
-              className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
-              onClick={handleImageConfirm}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleImageConfirm();
+              }}
               disabled={!uploadedImage}
             >
-              Confirm
+              {t('common.confirm') || 'Confirmar'}
             </button>
             <button
-              className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400"
-              onClick={handleImageModalClose}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleImageModalClose();
+              }}
             >
-              Cancel
+              {t('common.cancel') || 'Cancelar'}
             </button>
           </div>
         </div>
