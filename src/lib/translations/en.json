@@ -6,7 +6,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "edit": "Edit"
+    "edit": "Edit",
+    "confirm": "Confirm"
   },
   "chat": {
     "send": "Send",
@@ -23,6 +24,8 @@
     "greeting": "Hello! How can I help you today?",
     "greetingLoading": "Loading greeting...",
     "fallback": "Sorry, I didn't understand. Could you rephrase your request?",
+    "uploadImage": "Upload Image",
+    "dragAndDropImage": "Drag and drop or click to select an image",
     "voiceMode": {
       "idle": "Voice Mode",
       "recording": "Recording...",

@@ -6,7 +6,8 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
-    "edit": "Editar"
+    "edit": "Editar",
+    "confirm": "Confirmar"
   },
   "chat": {
     "send": "Enviar",
@@ -20,9 +21,11 @@
     "like": "Me gusta",
     "dislike": "No me gusta",
     "comment": "Comentar",
-    "greeting": "¡Hola! ¿En qué puedo ayudarte hoy?",
+    "greeting": "¡Hola! ¿Cómo puedo ayudarte hoy?",
     "greetingLoading": "Cargando saludo...",
-    "fallback": "Lo siento, no entendí. ¿Puedes reformular tu solicitud?",
+    "fallback": "Lo siento, no entendí. ¿Podrías reformular tu solicitud?",
+    "uploadImage": "Subir Imagen",
+    "dragAndDropImage": "Arrastra y suelta o haz clic para seleccionar una imagen",
     "voiceMode": {
       "idle": "Modo Voz",
       "recording": "Grabando...",

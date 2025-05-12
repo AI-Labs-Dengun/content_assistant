@@ -6,11 +6,12 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",
-    "edit": "Modifier"
+    "edit": "Modifier",
+    "confirm": "Confirmer"
   },
   "chat": {
     "send": "Envoyer",
-    "typeMessage": "Tapez un message...",
+    "typeMessage": "Écrivez un message...",
     "newChat": "Nouvelle Conversation",
     "deleteChat": "Supprimer la Conversation",
     "renameChat": "Renommer la Conversation",
@@ -22,7 +23,9 @@
     "comment": "Commenter",
     "greeting": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
     "greetingLoading": "Chargement de la salutation...",
-    "fallback": "Désolé, je n'ai pas compris. Pouvez-vous reformuler votre demande ?",
+    "fallback": "Désolé, je n'ai pas compris. Pourriez-vous reformuler votre demande ?",
+    "uploadImage": "Télécharger une Image",
+    "dragAndDropImage": "Glissez-déposez ou cliquez pour sélectionner une image",
     "voiceMode": {
       "idle": "Mode Vocal",
       "recording": "Enregistrement...",

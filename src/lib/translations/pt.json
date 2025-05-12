@@ -6,7 +6,8 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
-    "edit": "Editar"
+    "edit": "Editar",
+    "confirm": "Confirmar"
   },
   "chat": {
     "send": "Enviar",
@@ -23,6 +24,8 @@
     "greeting": "Olá! Como posso ajudar você hoje?",
     "greetingLoading": "Carregando saudação...",
     "fallback": "Desculpe, não entendi. Pode reformular sua solicitação?",
+    "uploadImage": "Enviar Imagem",
+    "dragAndDropImage": "Arraste e solte ou clique para selecionar uma imagem",
     "voiceMode": {
       "idle": "Modo de Voz",
       "recording": "A gravar...",
