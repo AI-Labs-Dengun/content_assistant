@@ -9,6 +9,8 @@ interface VoiceModalProps {
   onSubmit: (audioBlob: Blob) => void;
   mode: 'ai-speaking' | 'ready-to-record' | 'recording' | 'thinking' | 'loading';
   onToggleRecord: () => void;
+  modalRef: React.RefObject<HTMLDivElement>;
+  error?: string | null;
 }
 
 const VoiceModal: React.FC<VoiceModalProps> = ({
@@ -17,6 +19,7 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
   onSubmit,
   mode,
   onToggleRecord,
+  error,
 }) => {
   const { language } = useLanguage();
   const { t } = useTranslation(language);
@@ -94,6 +97,11 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
           {mode === 'loading' && (
             <div className="text-white/80 text-center">
               {t('voice.loading')}
+            </div>
+          )}
+          {error && (
+            <div className="text-red-400 text-center mt-2 px-4">
+              {error}
             </div>
           )}
         </div>
