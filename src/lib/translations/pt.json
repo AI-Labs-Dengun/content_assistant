@@ -97,7 +97,7 @@
       "invalidPasswordFormat": "A palavra-passe deve conter pelo menos uma letra maiúscula, uma minúscula e um número"
     },
     "success": {
-      "signIn": "Sessão iniciada com sucesso! Bem-vindo de volta",
+      "signIn": "Sessão iniciada com sucesso",
       "signUp": "Registo efetuado com sucesso! Por favor, confirme o seu e-mail",
       "signOut": "Sessão terminada com sucesso",
       "passwordReset": "E-mail de recuperação de palavra-passe enviado",
