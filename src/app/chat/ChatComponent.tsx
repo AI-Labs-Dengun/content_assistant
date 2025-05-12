@@ -79,6 +79,9 @@ const ChatComponent = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioProgressInterval = useRef<NodeJS.Timeout | null>(null);
+  const voiceModalRef = useRef<HTMLDivElement>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
@@ -598,7 +601,6 @@ const ChatComponent = () => {
   };
 
   const handleToggleRecord = () => {
-    console.log('handleToggleRecord called, current mode:', voiceModalMode);
     handleFirstInteraction();
     if (voiceModalMode === 'ready-to-record') {
       startRecording();
@@ -611,6 +613,7 @@ const ChatComponent = () => {
     console.log('startRecording called');
     if (typeof window === 'undefined') return;
     try {
+      setVoiceError(null);
       setVoiceModalMode('recording');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -626,7 +629,6 @@ const ChatComponent = () => {
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, processing audio...');
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        setAudioUrl(URL.createObjectURL(audioBlob));
         handleAudioSubmit(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -635,11 +637,17 @@ const ChatComponent = () => {
     } catch (err) {
       console.error('Recording error:', err);
       setVoiceModalMode('ready-to-record');
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setVoiceError('Permissão para usar o microfone foi negada. Por favor, permita o acesso ao microfone nas configurações do seu navegador.');
+        } else {
+          setVoiceError('Erro ao acessar o microfone. Por favor, verifique se seu dispositivo tem um microfone e se as permissões estão corretas.');
+        }
+      }
     }
   };
 
   const stopRecording = () => {
-    console.log('stopRecording called');
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       setVoiceModalMode('thinking');
       mediaRecorderRef.current.stop();
@@ -650,191 +658,13 @@ const ChatComponent = () => {
     setVoiceModalOpen(false);
     setVoiceModalMode('ai-speaking');
     setVoiceMode('idle');
+    setVoiceError(null);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-    }
-  };
-
-  useEffect(() => {
-    if (messages.length > 0 && messages[messages.length - 1].user === 'bot') {
-      const typeSpeed = 50;
-      const startDelay = 100;
-      const msg = messages[messages.length - 1].content || '';
-      setIsTypewriterActive(true);
-      const timeout = setTimeout(() => {
-        setIsTypewriterActive(false);
-      }, startDelay + msg.length * typeSpeed);
-      return () => clearTimeout(timeout);
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (isTypewriterActive && isNearBottom) {
-      const interval = setInterval(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isTypewriterActive, isNearBottom]);
-
-  const handleTooltipClick = async (tooltip: string) => {
-    handleFirstInteraction();
-    if (!user) return;
-    const userMsg: Message = {
-      id: 'user-' + Date.now(),
-      content: tooltip,
-      user: 'me',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setLoading(true);
-
-    let platform = selectedPlatform || extractPlatform(tooltip);
-    let topic = postTopic;
-    if (!platform) {
-      setSelectedPlatform(null);
-    } else {
-      setSelectedPlatform(platform);
-    }
-    if (!topic && platform && !extractPlatform(tooltip)) {
-      topic = tooltip;
-      setPostTopic(topic);
-    }
-
-    if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
-      const openaiMessages = [
-        { role: 'system', content: prompt },
-        ...messages.map((msg) => ({
-          role: msg.user === 'me' ? 'user' : 'assistant',
-          content: msg.content
-        })),
-        { role: 'user', content: tooltip }
-      ];
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
-        });
-        const data = await res.json();
-        if (data.reply && data.reply.includes('Tips:')) {
-          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: mainPost.trim(),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: 'bot-' + (Date.now() + 1),
-              content: 'Tips:' + tipsParts.join('Tips:').trim(),
-              user: 'bot',
-              created_at: new Date(Date.now() + 1).toISOString(),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: data.reply || t('chat.fallback'),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (platform && !topic) {
-      setSelectedPlatform(platform);
-      setPostTopic(null);
-      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
-        });
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!platform && tooltip.trim()) {
-      setPostTopic(tooltip);
-      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
-        });
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
     }
   };
 
@@ -849,7 +679,6 @@ const ChatComponent = () => {
         body: formData,
       });
       const data = await res.json();
-      console.log('Transcription result:', data);
       if (data.text) {
         const userMsg = {
           id: 'user-' + Date.now(),
@@ -877,9 +706,11 @@ const ChatComponent = () => {
           ]);
           if (aiData.reply) {
             playTTS(aiData.reply, 'bot-' + Date.now(), () => {
+              setVoiceModalOpen(false);
               setVoiceModalMode('ready-to-record');
             });
           } else {
+            setVoiceModalOpen(false);
             setVoiceModalMode('ready-to-record');
           }
         } catch (err) {
@@ -892,15 +723,18 @@ const ChatComponent = () => {
               created_at: new Date().toISOString(),
             },
           ]);
+          setVoiceModalOpen(false);
           setVoiceModalMode('ready-to-record');
         } finally {
           setLoading(false);
         }
       } else {
+        setVoiceModalOpen(false);
         setVoiceModalMode('ready-to-record');
       }
     } catch (err) {
       console.error('Transcription error:', err);
+      setVoiceModalOpen(false);
       setVoiceModalMode('ready-to-record');
     }
   };
@@ -1146,6 +980,185 @@ const ChatComponent = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showEmojiPicker]);
+
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].user === 'bot') {
+      const typeSpeed = 50;
+      const startDelay = 100;
+      const msg = messages[messages.length - 1].content || '';
+      setIsTypewriterActive(true);
+      const timeout = setTimeout(() => {
+        setIsTypewriterActive(false);
+      }, startDelay + msg.length * typeSpeed);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isTypewriterActive && isNearBottom) {
+      const interval = setInterval(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isTypewriterActive, isNearBottom]);
+
+  const handleTooltipClick = async (tooltip: string) => {
+    handleFirstInteraction();
+    if (!user) return;
+    const userMsg: Message = {
+      id: 'user-' + Date.now(),
+      content: tooltip,
+      user: 'me',
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+
+    let platform = selectedPlatform || extractPlatform(tooltip);
+    let topic = postTopic;
+    if (!platform) {
+      setSelectedPlatform(null);
+    } else {
+      setSelectedPlatform(platform);
+    }
+    if (!topic && platform && !extractPlatform(tooltip)) {
+      topic = tooltip;
+      setPostTopic(topic);
+    }
+
+    if (platform && topic) {
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const openaiMessages = [
+        { role: 'system', content: prompt },
+        ...messages.map((msg) => ({
+          role: msg.user === 'me' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: tooltip }
+      ];
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: openaiMessages, language }),
+        });
+        const data = await res.json();
+        if (data.reply && data.reply.includes('Tips:')) {
+          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: mainPost.trim(),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'bot-' + (Date.now() + 1),
+              content: 'Tips:' + tipsParts.join('Tips:').trim(),
+              user: 'bot',
+              created_at: new Date(Date.now() + 1).toISOString(),
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (platform && !topic) {
+      setSelectedPlatform(platform);
+      setPostTopic(null);
+      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!platform && tooltip.trim()) {
+      setPostTopic(tooltip);
+      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+  };
 
   if (!user) return null;
 
@@ -1420,8 +1433,8 @@ const ChatComponent = () => {
                 type="button"
                 className="text-xl text-white hover:text-gray-200 ml-2"
                 onClick={() => {
-                  setVoiceModalMode('loading');
                   setVoiceModalOpen(true);
+                  setVoiceModalMode('ready-to-record');
                 }}
               >
                 <FaMicrophone />
@@ -1575,11 +1588,13 @@ const ChatComponent = () => {
         </div>
       </Modal>
       <VoiceModal
-        isOpen={voiceModalOpen}
+        isOpen={voiceModalOpen && (voiceModalMode === 'ready-to-record' || voiceModalMode === 'recording')}
         onClose={handleVoiceModalClose}
         onSubmit={handleAudioSubmit}
         mode={voiceModalMode}
         onToggleRecord={handleToggleRecord}
+        modalRef={voiceModalRef}
+        error={voiceError}
       />
     </div>
   );
