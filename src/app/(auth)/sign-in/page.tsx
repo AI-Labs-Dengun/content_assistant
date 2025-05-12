@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '../../../lib/LanguageContext';
 import { useTranslation } from '../../../lib/i18n';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import useNotification from '../../../lib/hooks/useNotification';
+import { Toaster } from 'react-hot-toast';
 
 export default function SignIn() {
   const { dark, toggleTheme } = useTheme();
@@ -13,29 +15,56 @@ export default function SignIn() {
   const router = useRouter();
   const { language } = useLanguage();
   const { t } = useTranslation(language);
+  const notify = useNotification();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
     
     try {
       const { error } = await signIn(email, password);
       
       if (error) {
-        setError(error.message || t('auth.signInError'));
+        let errorMessage = t('auth.errors.serverError');
+        
+        // Mapear erros específicos do Supabase para nossas mensagens traduzidas
+        switch (error.message) {
+          case 'Invalid login credentials':
+            errorMessage = t('auth.errors.invalidCredentials');
+            break;
+          case 'Email not confirmed':
+            errorMessage = t('auth.errors.emailNotConfirmed');
+            break;
+          case 'Network error':
+            errorMessage = t('auth.errors.networkError');
+            break;
+          case 'Too many requests':
+            errorMessage = t('auth.errors.tooManyRequests');
+            break;
+          default:
+            if (error.message.includes('email')) {
+              errorMessage = t('auth.errors.invalidEmailFormat');
+            } else if (error.message.includes('password')) {
+              errorMessage = t('auth.errors.passwordTooShort');
+            }
+        }
+        
+        notify.error(errorMessage);
       } else {
-        // Redirect to chat page on successful sign in
-        router.push('/chat');
+        notify.success(t('auth.success.signIn'));
+        // Adiciona um pequeno atraso antes do redirecionamento
+        setTimeout(() => {
+          router.push('/chat');
+        }, 1000);
       }
     } catch (err: any) {
-      setError(err.message || t('common.error'));
+      const errorMessage = err.message || t('auth.errors.serverError');
+      notify.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -43,6 +72,34 @@ export default function SignIn() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-auth-gradient relative">
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'var(--background)',
+            color: 'var(--foreground)',
+            border: '1px solid #10B981',
+          },
+          success: {
+            iconTheme: {
+              primary: '#10B981',
+              secondary: 'var(--background)',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: 'var(--background)',
+            },
+            style: {
+              background: 'var(--background)',
+              color: 'var(--foreground)',
+              border: '1px solid #EF4444',
+            },
+          },
+        }}
+      />
       <div className="w-full h-screen md:h-auto md:max-w-md flex flex-col justify-center md:justify-start md:pt-12 md:pb-12 rounded-none md:rounded-3xl shadow-2xl border border-white/30">
         <div className="flex-1 flex flex-col justify-center px-6">
           <div className="flex flex-col gap-2 mb-2">
@@ -67,12 +124,6 @@ export default function SignIn() {
             </div>
             <p className="text-white/80 text-left text-base leading-tight w-full mb-4">{t('auth.signInWithGoogle')}</p>
           </div>
-          
-          {error && (
-            <div className="mx-6 mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded text-red-200 text-sm">
-              {error}
-            </div>
-          )}
           
           <form className="w-full flex flex-col gap-2" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-y-1">

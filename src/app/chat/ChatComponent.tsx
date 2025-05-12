@@ -12,6 +12,9 @@ import VoiceModal from '../../components/VoiceModal';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
+import { Toaster } from 'react-hot-toast';
+
+
 const Modal: any = ReactModal;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ReactMarkdown = require('react-markdown').default;
