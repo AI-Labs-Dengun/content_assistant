@@ -45,6 +45,8 @@ const ChatComponent = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [feedback, setFeedback] = useState<Record<string, 'like' | 'dislike' | undefined>>({});
   const [commentModal, setCommentModal] = useState<{ open: boolean, message?: { id: string, content: string } }>({ open: false });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -71,6 +73,8 @@ const ChatComponent = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
@@ -1040,6 +1044,44 @@ const ChatComponent = () => {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        settingsOpen &&
+        settingsRef.current &&
+        !settingsRef.current.contains(event.target as Node) &&
+        settingsButtonRef.current &&
+        !settingsButtonRef.current.contains(event.target as Node)
+      ) {
+        setSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
   if (!user) return null;
 
   return (
@@ -1050,6 +1092,7 @@ const ChatComponent = () => {
           <div className="flex items-center gap-4">
             <div className="relative">
               <button
+                ref={settingsButtonRef}
                 onClick={() => setSettingsOpen((v) => !v)}
                 className="p-2 rounded-full bg-white/30 hover:bg-white/50 text-gray-800 dark:text-white focus:outline-none"
                 aria-label={t('settings.title')}
@@ -1057,7 +1100,10 @@ const ChatComponent = () => {
                 <FaCog className="text-xl text-white" />
               </button>
               {settingsOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md">
+                <div 
+                  ref={settingsRef}
+                  className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md"
+                >
                   <button
                     onClick={toggleTheme}
                     className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 rounded-t-xl"
@@ -1256,6 +1302,7 @@ const ChatComponent = () => {
           >
             <div className="flex items-center w-full">
               <button
+                ref={emojiButtonRef}
                 type="button"
                 className="hidden md:inline-flex text-xl text-white hover:text-gray-200 mr-2"
                 onClick={() => setShowEmojiPicker((v) => !v)}
@@ -1272,7 +1319,6 @@ const ChatComponent = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={loading}
                 style={{ background: 'transparent' }}
-                onBlur={() => setTimeout(() => setShowEmojiPicker(false), 200)}
               />
               <button
                 type="submit"
@@ -1319,14 +1365,17 @@ const ChatComponent = () => {
               </button>
             </div>
             {showEmojiPicker && (
-              <div className="absolute bottom-12 left-0 z-50">
+              <div 
+                ref={emojiPickerRef}
+                className="absolute bottom-12 left-0 z-50"
+              >
                 <EmojiPicker
                   data={data}
                   theme={dark ? 'dark' : 'light'}
                   onEmojiSelect={(e: any) => {
                     insertEmoji(e.native);
-                    setShowEmojiPicker(false);
                   }}
+                  previewPosition="none"
                 />
               </div>
             )}
