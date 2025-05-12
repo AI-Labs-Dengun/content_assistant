@@ -1,20 +1,26 @@
 {
   "common": {
-    "loading": "Laden...",
+    "loading": "Wird geladen...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Wiederholen",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "edit": "Bearbeiten",
-    "confirm": "Bestätigen"
+    "confirm": "Bestätigen",
+    "notifications": {
+      "success": "Erfolg",
+      "error": "Fehler",
+      "info": "Information",
+      "loading": "Wird geladen..."
+    }
   },
   "chat": {
     "send": "Senden",
     "typeMessage": "Nachricht eingeben...",
-    "newChat": "Neuer Chat",
-    "deleteChat": "Chat löschen",
-    "renameChat": "Chat umbenennen",
+    "newChat": "Neues Gespräch",
+    "deleteChat": "Gespräch löschen",
+    "renameChat": "Gespräch umbenennen",
     "addComment": "Kommentar hinzufügen",
     "writeComment": "Schreiben Sie Ihren Kommentar...",
     "submit": "Absenden",
@@ -23,23 +29,23 @@
     "comment": "Kommentieren",
     "greeting": "Hallo! Wie kann ich Ihnen heute helfen?",
     "greetingLoading": "Begrüßung wird geladen...",
-    "fallback": "Entschuldigung, ich habe das nicht verstanden. Können Sie Ihre Anfrage umformulieren?",
+    "fallback": "Entschuldigung, ich habe Sie nicht verstanden. Könnten Sie Ihre Anfrage anders formulieren?",
     "uploadImage": "Bild hochladen",
-    "dragAndDropImage": "Ziehen Sie ein Bild hierher oder klicken Sie, um eine Datei auszuwählen",
+    "dragAndDropImage": "Ziehen und ablegen oder klicken, um ein Bild auszuwählen",
     "voiceMode": {
       "idle": "Sprachmodus",
-      "recording": "Aufnahme...",
+      "recording": "Aufnahme läuft...",
       "aiSpeaking": "KI spricht..."
     },
     "assistantTitle": "KI-Assistent",
     "tooltips": [
-      "Erstellen Sie einen Post für einen Produkt-Launch auf Instagram",
+      "Erstellen Sie einen Produkt-Launch-Post für Instagram",
       "Schreiben Sie einen Post über unsere Dienstleistungen für LinkedIn",
       "Erstellen Sie einen ansprechenden Post über eine neue Funktion für Facebook",
       "Schreiben Sie einen Werbepost für eine Veranstaltung auf Instagram",
-      "Erstellen Sie einen Unternehmensankündigungs-Post für LinkedIn",
-      "Schreiben Sie einen Team-Spotlight-Post für Instagram",
-      "Erstellen Sie einen Kundenbewertungs-Post für Facebook",
+      "Erstellen Sie einen Unternehmensankündigungspost für LinkedIn",
+      "Schreiben Sie einen Team-Highlight-Post für Instagram",
+      "Erstellen Sie einen Kundenbewertungspost für Facebook",
       "Schreiben Sie einen Thought-Leadership-Post für LinkedIn"
     ]
   },
@@ -57,8 +63,8 @@
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
     "forgotPassword": "Passwort vergessen?",
-    "noAccount": "Kein Konto?",
-    "haveAccount": "Haben Sie bereits ein Konto?",
+    "noAccount": "Noch kein Konto?",
+    "haveAccount": "Bereits ein Konto?",
     "signInWithGoogle": "Mit Google anmelden",
     "signUpWithGoogle": "Mit Google registrieren",
     "or": "oder",
@@ -67,21 +73,41 @@
     "passwordsDontMatch": "Die Passwörter stimmen nicht überein",
     "signInError": "Anmeldefehler",
     "signUpError": "Registrierungsfehler",
-    "signInSuccess": "Anmeldung erfolgreich",
-    "signUpSuccess": "Registrierung erfolgreich",
+    "signInSuccess": "Erfolgreich angemeldet",
+    "signUpSuccess": "Erfolgreich registriert",
     "name": "Name",
-    "company": "Firma (Optional)",
-    "companyPlaceholder": "Geben Sie den Namen Ihrer Firma ein (optional)",
+    "company": "Unternehmen (Optional)",
+    "companyPlaceholder": "Geben Sie Ihren Firmennamen ein (optional)",
     "signOut": "Abmelden",
-    "confirmEmailTitle": "Bestätigen Sie Ihre E-Mail",
-    "confirmEmailMessage": "Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf den Link klicken, den wir Ihnen gesendet haben. Nach der Bestätigung klicken Sie auf die Schaltfläche unten, um fortzufahren.",
+    "confirmEmailTitle": "E-Mail bestätigen",
+    "confirmEmailMessage": "Bitte bestätigen Sie Ihre E-Mail-Adresse, indem Sie auf den Link klicken, den wir an Ihren Posteingang gesendet haben. Nach der Bestätigung klicken Sie auf die Schaltfläche unten, um fortzufahren.",
     "confirmEmailCta": "Ich habe meine E-Mail bestätigt",
-    "confirmEmailError": "Bitte bestätigen Sie Ihre E-Mail, bevor Sie fortfahren."
+    "confirmEmailError": "Bitte bestätigen Sie Ihre E-Mail, bevor Sie fortfahren.",
+    "errors": {
+      "invalidCredentials": "Ungültige E-Mail oder Passwort",
+      "emailNotConfirmed": "Bitte bestätigen Sie Ihre E-Mail, bevor Sie sich anmelden",
+      "networkError": "Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung",
+      "serverError": "Serverfehler. Bitte versuchen Sie es später erneut",
+      "tooManyRequests": "Zu viele Versuche. Bitte warten Sie einige Minuten",
+      "invalidEmailFormat": "Ungültiges E-Mail-Format",
+      "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein",
+      "passwordTooLong": "Das Passwort darf nicht länger als 72 Zeichen sein",
+      "emailAlreadyInUse": "Diese E-Mail-Adresse ist bereits registriert",
+      "weakPassword": "Das Passwort ist zu schwach. Verwenden Sie Buchstaben, Zahlen und Symbole",
+      "invalidPasswordFormat": "Das Passwort muss mindestens einen Großbuchstaben, einen Kleinbuchstaben und eine Zahl enthalten"
+    },
+    "success": {
+      "signIn": "Erfolgreich angemeldet! Willkommen zurück",
+      "signUp": "Erfolgreich registriert! Bitte bestätigen Sie Ihre E-Mail",
+      "signOut": "Erfolgreich abgemeldet",
+      "passwordReset": "Passwort-Reset-E-Mail gesendet",
+      "emailConfirmed": "E-Mail erfolgreich bestätigt"
+    }
   },
   "voice": {
     "title": "Sprachaufnahme",
     "aiSpeaking": "KI spricht...",
-    "aiThinking": "KI denkt...",
+    "aiThinking": "KI denkt nach...",
     "loading": "Audio wird geladen...",
     "start": "Aufnahme starten",
     "stop": "Aufnahme stoppen"

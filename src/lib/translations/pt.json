@@ -7,7 +7,13 @@
     "cancel": "Cancelar",
     "delete": "Eliminar",
     "edit": "Editar",
-    "confirm": "Confirmar"
+    "confirm": "Confirmar",
+    "notifications": {
+      "success": "Sucesso",
+      "error": "Erro",
+      "info": "Informação",
+      "loading": "A carregar..."
+    }
   },
   "chat": {
     "send": "Enviar",
@@ -76,7 +82,27 @@
     "confirmEmailTitle": "Confirme o seu e-mail",
     "confirmEmailMessage": "Por favor, confirme o seu endereço de e-mail clicando no link que enviámos para a sua caixa de entrada. Depois de confirmar, clique no botão abaixo para continuar.",
     "confirmEmailCta": "Já confirmei o meu e-mail",
-    "confirmEmailError": "Por favor, confirme o seu e-mail antes de continuar."
+    "confirmEmailError": "Por favor, confirme o seu e-mail antes de continuar.",
+    "errors": {
+      "invalidCredentials": "E-mail ou palavra-passe incorretos",
+      "emailNotConfirmed": "Por favor, confirme o seu e-mail antes de iniciar sessão",
+      "networkError": "Erro de conexão. Por favor, verifique a sua internet",
+      "serverError": "Erro no servidor. Por favor, tente novamente mais tarde",
+      "tooManyRequests": "Muitas tentativas. Por favor, aguarde alguns minutos",
+      "invalidEmailFormat": "Formato de e-mail inválido",
+      "passwordTooShort": "A palavra-passe deve ter pelo menos 6 caracteres",
+      "passwordTooLong": "A palavra-passe não pode ter mais de 72 caracteres",
+      "emailAlreadyInUse": "Este e-mail já está registado",
+      "weakPassword": "A palavra-passe é muito fraca. Use letras, números e símbolos",
+      "invalidPasswordFormat": "A palavra-passe deve conter pelo menos uma letra maiúscula, uma minúscula e um número"
+    },
+    "success": {
+      "signIn": "Sessão iniciada com sucesso! Bem-vindo de volta",
+      "signUp": "Registo efetuado com sucesso! Por favor, confirme o seu e-mail",
+      "signOut": "Sessão terminada com sucesso",
+      "passwordReset": "E-mail de recuperação de palavra-passe enviado",
+      "emailConfirmed": "E-mail confirmado com sucesso"
+    }
   },
   "voice": {
     "title": "Gravação de Voz",
