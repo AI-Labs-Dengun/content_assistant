@@ -116,27 +116,31 @@ const ChatComponent = () => {
 
   // Efeito para scroll automático apenas quando necessário
   useEffect(() => {
-    if (shouldAutoScroll && messages.length > 0 && !userScrolled) {
+    if (shouldAutoScroll && messages.length > 0 && !userScrolled && !isTypewriterActive) {
       const timeoutId = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, shouldAutoScroll, userScrolled]);
+  }, [messages, shouldAutoScroll, userScrolled, isTypewriterActive]);
 
   // Efeito para o typewriter
   useEffect(() => {
     if (isTypewriterActive && shouldAutoScroll && !userScrolled) {
+      // Reduz a frequência do scroll automático durante o typewriter
       const interval = setInterval(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+        if (messagesEndRef.current && isNearBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500); // Aumentado de 100ms para 500ms
       return () => clearInterval(interval);
     }
-  }, [isTypewriterActive, shouldAutoScroll, userScrolled]);
+  }, [isTypewriterActive, shouldAutoScroll, userScrolled, isNearBottom]);
 
   // Adicione um botão de scroll para baixo quando não estiver no final
   const scrollToBottom = () => {
     setShouldAutoScroll(true);
+    setUserScrolled(false);
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -1168,9 +1172,14 @@ const ChatComponent = () => {
       const startDelay = 100;
       const msg = messages[messages.length - 1].content || '';
       setIsTypewriterActive(true);
+      
+      // Desativa o typewriter imediatamente após a resposta
       const timeout = setTimeout(() => {
         setIsTypewriterActive(false);
-      }, startDelay + msg.length * typeSpeed);
+        setShouldAutoScroll(true);
+        setUserScrolled(false);
+      }, startDelay); // Removido o cálculo baseado no tamanho da mensagem
+      
       return () => clearTimeout(timeout);
     }
   }, [messages]);
