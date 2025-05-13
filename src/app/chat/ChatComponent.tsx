@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay } from 'react-icons/fa';
+import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay, FaCopy, FaCheck } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
 import { useTheme } from '../providers/ThemeProvider';
 import { useLanguage } from '../../lib/LanguageContext';
@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
 import { Toaster } from 'react-hot-toast';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 
 const Modal: any = ReactModal;
@@ -87,6 +88,8 @@ const ChatComponent = () => {
   const audioProgressInterval = useRef<NodeJS.Timeout | null>(null);
   const voiceModalRef = useRef<HTMLDivElement>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const notify = useNotification();
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
 
   const handleScroll = () => {
@@ -1329,10 +1332,50 @@ const ChatComponent = () => {
     }
   };
 
+  const isPostResponse = (content: string) => {
+    // Verifica se é uma resposta de post (contém título em negrito e hashtags)
+    const hasBoldTitle = content.includes('**') || content.includes('__');
+    const hasHashtags = content.includes('#');
+    const isNotGreeting = !content.includes('Olá') && !content.includes('Oi');
+
+    console.log('Verificando post:', {
+      content,
+      hasBoldTitle,
+      hasHashtags,
+      isNotGreeting,
+      isPost: hasBoldTitle && hasHashtags && isNotGreeting
+    });
+
+    return hasBoldTitle && hasHashtags && isNotGreeting;
+  };
+
+  const handleCopyContent = (content: string, messageId: string) => {
+    // Divide o conteúdo pela linha divisória
+    const [mainContent] = content.split('---');
+    
+    // Remove espaços extras e limpa o conteúdo
+    const cleanContent = mainContent.trim();
+    
+    navigator.clipboard.writeText(cleanContent)
+      .then(() => {
+        notify.success('chat.copied');
+        setCopiedMessageId(messageId);
+        // Reset o estado após 2 segundos
+        setTimeout(() => {
+          setCopiedMessageId(null);
+        }, 2000);
+      })
+      .catch(err => {
+        console.error('Erro ao copiar:', err);
+        notify.error('chat.copyError');
+      });
+  };
+
   if (!user) return null;
 
   return (
     <div className="bg-auth-gradient min-h-screen flex items-center justify-center">
+      <Toaster />
       <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-white/30">
         <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-white/20">
           <h1 className="text-2xl font-bold text-white drop-shadow">{t('chat.assistantTitle') || 'Assistente IA'}</h1>
@@ -1401,34 +1444,50 @@ const ChatComponent = () => {
                     </div>
                   )}
                   <div
-                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
                     <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'me' && msg.image ? (
                         <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2" />
                       ) : null}
                       {msg.user === 'bot' ? (
-                        <ReactMarkdown
-                          components={{
-                            p({ node, children, ...props }: any) {
-                              return <p {...props}>{children}</p>;
-                            },
-                            strong({ node, children, ...props }: any) {
-                              return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
-                            },
-                            h1({ children, ...props }: any) {
-                              return <div className="font-bold text-xl mb-2">{children}</div>;
-                            },
-                            h2({ children, ...props }: any) {
-                              return <div className="font-bold text-lg mb-2">{children}</div>;
-                            },
-                            hr({ node, ...props }: any) {
-                              return <hr className="my-4 border-gray-600" {...props} />;
-                            }
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                        <div className="relative">
+                          <ReactMarkdown
+                            components={{
+                              p({ node, children, ...props }: any) {
+                                return <p {...props}>{children}</p>;
+                              },
+                              strong({ node, children, ...props }: any) {
+                                return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
+                              },
+                              h1({ children, ...props }: any) {
+                                return <div className="font-bold text-xl mb-2">{children}</div>;
+                              },
+                              h2({ children, ...props }: any) {
+                                return <div className="font-bold text-lg mb-2">{children}</div>;
+                              },
+                              hr({ node, ...props }: any) {
+                                return <hr className="my-4 border-gray-600" {...props} />;
+                              }
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                          {isPostResponse(msg.content) && (
+                            <div className="absolute top-0 right-2 flex flex-col items-center gap-1">
+                              <button
+                                onClick={() => handleCopyContent(msg.content, msg.id)}
+                                className="text-white/70 hover:text-white transition-colors z-10"
+                                title={t('chat.copy') || 'Copiar'}
+                              >
+                                <FaCopy className="text-lg" />
+                              {copiedMessageId === msg.id && (
+                                <FaCheck className="text-xs text-green-500 -top-1 z-20" />
+                              )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span>{msg.content}</span>
                       )}
