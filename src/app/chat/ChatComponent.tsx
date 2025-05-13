@@ -63,6 +63,8 @@ const ChatComponent = () => {
   const [greetingLoading, setGreetingLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [userScrolled, setUserScrolled] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   const [ttsLoadingMsgId, setTtsLoadingMsgId] = useState<string | null>(null);
@@ -76,6 +78,7 @@ const ChatComponent = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string | null>(null);
+  const [imageText, setImageText] = useState('');
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [currentAudioId, setCurrentAudioId] = useState<string | null>(null);
@@ -89,16 +92,48 @@ const ChatComponent = () => {
   const handleScroll = () => {
     const el = chatContainerRef.current;
     if (!el) return;
+    
     const threshold = 100;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+    
+    // Se o usuário rolar para cima, desative o auto-scroll
+    if (!atBottom) {
+      setShouldAutoScroll(false);
+    }
+    
+    // Se o usuário rolar até o final, reative o auto-scroll
+    if (atBottom) {
+      setShouldAutoScroll(true);
+    }
+    
     setIsNearBottom(atBottom);
   };
 
+  // Efeito para scroll automático apenas quando necessário
   useEffect(() => {
-    if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll && messages.length > 0) {
+      const timeoutId = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [messages, isNearBottom]);
+  }, [messages, shouldAutoScroll]);
+
+  // Efeito para o typewriter
+  useEffect(() => {
+    if (isTypewriterActive && shouldAutoScroll) {
+      const interval = setInterval(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isTypewriterActive, shouldAutoScroll]);
+
+  // Adicione um botão de scroll para baixo quando não estiver no final
+  const scrollToBottom = () => {
+    setShouldAutoScroll(true);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   React.useEffect(() => {
     if (!user) {
@@ -296,16 +331,53 @@ const ChatComponent = () => {
   const extractPlatform = (text: string): string | null => {
     const platforms = ['instagram', 'linkedin', 'facebook'];
     const lower = text.toLowerCase();
-    return platforms.find((p) => lower.includes(p)) || null;
+    // Primeiro, procura por menções diretas à plataforma
+    const directMatch = platforms.find((p) => lower.includes(p));
+    if (directMatch) return directMatch;
+    
+    // Se não encontrar menção direta, procura por variações comuns
+    const variations: Record<string, string[]> = {
+      'linkedin': ['linkedin', 'linked in', 'linked-in'],
+      'instagram': ['instagram', 'insta', 'ig'],
+      'facebook': ['facebook', 'fb', 'face']
+    };
+    
+    for (const [platform, vars] of Object.entries(variations)) {
+      if (vars.some(v => lower.includes(v))) return platform;
+    }
+    
+    return null;
   };
 
   const extractTopic = (text: string, platform: string | null): string | null => {
     if (!text) return null;
     let topic = text;
+    
+    // Remove menções à plataforma
     if (platform) {
-      topic = topic.replace(new RegExp(platform, 'i'), '').trim();
+      const variations = {
+        'linkedin': ['linkedin', 'linked in', 'linked-in'],
+        'instagram': ['instagram', 'insta', 'ig'],
+        'facebook': ['facebook', 'fb', 'face']
+      };
+      const platformVars = variations[platform as keyof typeof variations] || [platform];
+      platformVars.forEach(p => {
+        topic = topic.replace(new RegExp(p, 'i'), '').trim();
+      });
     }
-    topic = topic.replace(/^(escreva|escreve|write|crie|create|haz|fais|erstelle|schreibe|make|generate|génère|genera|criar|ajuda|help|sobre|about|para|for|pour|für)\s*/i, '').trim();
+    
+    // Remove palavras comuns de comando
+    const commandWords = [
+      'escreva', 'escreve', 'write', 'crie', 'create', 'haz', 'fais', 'erstelle', 
+      'schreibe', 'make', 'generate', 'génère', 'genera', 'criar', 'ajuda', 'help', 
+      'sobre', 'about', 'para', 'for', 'pour', 'für', 'post', 'postar', 'publicar',
+      'publish', 'share', 'compartilhar'
+    ];
+    
+    commandWords.forEach(word => {
+      topic = topic.replace(new RegExp(`^${word}\\s*`, 'i'), '').trim();
+    });
+    
     if (topic.length > 2) return topic;
     return null;
   };
@@ -771,17 +843,30 @@ const ChatComponent = () => {
     setImageModalOpen(false);
     setUploadedImage(null);
     setImagePreview(null);
+    setImageText('');
   };
 
   const handleImageConfirm = async () => {
     if (!uploadedImage) return;
     setLoading(true);
     setImageModalOpen(false);
+    
+    // Extrai plataforma e tópico do texto fornecido
+    const platform = selectedPlatform || extractPlatform(imageText);
+    const topic = postTopic || extractTopic(imageText, platform);
+    
+    if (platform) {
+      setSelectedPlatform(platform);
+    }
+    if (topic) {
+      setPostTopic(topic);
+    }
+    
     setMessages((prev) => [
       ...prev,
       {
         id: 'user-img-' + Date.now(),
-        content: '',
+        content: imageText,
         user: 'me',
         created_at: new Date().toISOString(),
         image: imagePreview,
@@ -794,6 +879,7 @@ const ChatComponent = () => {
       const formData = new FormData();
       formData.append('image', uploadedImage);
       formData.append('language', language);
+      formData.append('context', imageText);
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
@@ -836,10 +922,24 @@ const ChatComponent = () => {
       return;
     }
 
-    if (selectedPlatform) {
-      const prompt = `Create a social media post for ${selectedPlatform} based on this image (description: ${description}). Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying. Use a vertical, block-style layout.`;
+    if (platform && topic) {
+      const prompt = `Create a social media post for ${platform} based on this image and the user's provided context.
+
+      Image Description: ${description}
+      User's Context: ${imageText}
+      Topic: ${topic}
+
+      Please create a post that:
+      1. Incorporates both the image analysis and the user's provided context
+      2. Focuses specifically on the topic: ${topic}
+      3. Follows best practices for ${platform}
+      4. Includes a clear call-to-action
+      5. Uses relevant hashtags
+      6. Maintains an appropriate tone for the platform
+
+      Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying. Use a vertical, block-style layout.`;
       try {
-        console.log('Generating post for platform:', selectedPlatform);
+        console.log('Generating post for platform:', platform);
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -889,9 +989,73 @@ const ChatComponent = () => {
         setLoading(false);
         setUploadedImage(null);
         setImagePreview(null);
+        setImageText('');
+      }
+    } else if (platform) {
+      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
+
+Image Description: ${description}
+Selected Platform: ${platform}
+
+Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
+      try {
+        console.log('Generating topic question...');
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+          console.error('Question generation failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            error: data.error,
+            details: data.details
+          });
+          throw new Error(data.error || 'Failed to generate follow-up question');
+        }
+        
+        if (!data.reply) {
+          console.error('No reply in response:', data);
+          throw new Error('No response received from AI');
+        }
+        
+        console.log('Question generation successful');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply,
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        console.error('AI response error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: err instanceof Error ? err.message : t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        setUploadedImage(null);
+        setImagePreview(null);
+        setImageText('');
       }
     } else {
-      const followupPrompt = `The user uploaded an image (description: ${description}). Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
+
+Image Description: ${description}
+
+Ask the user in a friendly, creative, and context-aware way which social media platform they would like to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
       try {
         console.log('Generating platform question...');
         const res = await fetch('/api/chatgpt', {
@@ -942,6 +1106,7 @@ const ChatComponent = () => {
         setLoading(false);
         setUploadedImage(null);
         setImagePreview(null);
+        setImageText('');
       }
     }
   };
@@ -996,15 +1161,6 @@ const ChatComponent = () => {
       return () => clearTimeout(timeout);
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (isTypewriterActive && isNearBottom) {
-      const interval = setInterval(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isTypewriterActive, isNearBottom]);
 
   const handleTooltipClick = async (tooltip: string) => {
     handleFirstInteraction();
@@ -1216,7 +1372,7 @@ const ChatComponent = () => {
         <main
           ref={chatContainerRef}
           onScroll={handleScroll}
-          className="flex-1 px-6 py-4 overflow-y-auto custom-scrollbar">
+          className="flex-1 px-6 py-4 overflow-y-auto custom-scrollbar relative">
           {greetingLoading ? (
             <div className="flex justify-center items-center py-8">
               <span className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></span>
@@ -1333,6 +1489,17 @@ const ChatComponent = () => {
                   )}
                 </div>
               ))}
+              {!isNearBottom && (
+                <button
+                  onClick={scrollToBottom}
+                  className="fixed bottom-24 right-4 md:right-auto md:left-1/2 md:transform md:-translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-200 z-50"
+                  aria-label="Scroll to bottom"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+                  </svg>
+                </button>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -1490,6 +1657,8 @@ const ChatComponent = () => {
           }
         }}
       />
+
+      {/* Modal de UploadImage  */}
       <Modal
         isOpen={imageModalOpen}
         onRequestClose={handleImageModalClose}
@@ -1566,6 +1735,18 @@ const ChatComponent = () => {
                 <span className="text-center px-4">{t('chat.dragAndDropImage') || 'Arraste e solte ou clique para selecionar uma imagem'}</span>
               </div>
             )}
+          </div>
+          <div className="w-full">
+            <div className="flex items-center w-full bg-transparent rounded-2xl px-4 py-2 shadow-md border border-white/30">
+              <input
+                type="text"
+                placeholder={t('chat.typeMessage') || 'Digite uma mensagem para a imagem...'}
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
+                value={imageText}
+                onChange={(e) => setImageText(e.target.value)}
+                style={{ background: 'transparent' }}
+              />
+            </div>
           </div>
           <div className="flex gap-3 mt-4 w-full">
             <button
