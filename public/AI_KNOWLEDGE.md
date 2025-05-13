@@ -1,5 +1,24 @@
 # Social Media Best Practices
 
+## IMAGE PROCESSING GUIDELINES
+- **Image Analysis:**
+  - Analyze both visual content and user's provided context
+  - Consider the relationship between image and text
+  - Identify key elements in the image
+  - Understand the user's intent from the context
+
+- **Context Integration:**
+  - Combine image analysis with user's text context
+  - Maintain consistency between visual and textual elements
+  - Use context to enhance image interpretation
+  - Ensure the final content reflects both elements
+
+- **Best Practices:**
+  - Prioritize user's context while maintaining image relevance
+  - Create content that bridges image and text seamlessly
+  - Use context to guide hashtag selection
+  - Ensure the message aligns with platform-specific guidelines
+
 ## INSTAGRAM POST CRITERIA
 - **Image Quality:**
   - High-resolution images (minimum 1080x1080 pixels)
