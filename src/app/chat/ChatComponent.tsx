@@ -865,6 +865,10 @@ const ChatComponent = () => {
       setUploadedImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
+    // Limpa o valor do input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageModalClose = () => {
@@ -872,6 +876,10 @@ const ChatComponent = () => {
     setUploadedImage(null);
     setImagePreview(null);
     setImageText('');
+    // Limpa o valor do input ao fechar o modal
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageConfirm = async () => {
@@ -1374,15 +1382,11 @@ const ChatComponent = () => {
     // Verifica se é uma resposta de post (contém título em negrito e hashtags)
     const hasBoldTitle = content.includes('**') || content.includes('__');
     const hasHashtags = content.includes('#');
-    const isNotGreeting = !content.includes('Olá') && !content.includes('Oi');
-
-    console.log('Verificando post:', {
-      content,
-      hasBoldTitle,
-      hasHashtags,
-      isNotGreeting,
-      isPost: hasBoldTitle && hasHashtags && isNotGreeting
-    });
+    const isNotGreeting = !content.toLowerCase().includes('olá') && 
+                         !content.toLowerCase().includes('oi') && 
+                         !content.toLowerCase().includes('bom dia') &&
+                         !content.toLowerCase().includes('boa tarde') &&
+                         !content.toLowerCase().includes('boa noite');
 
     return hasBoldTitle && hasHashtags && isNotGreeting;
   };
@@ -1394,9 +1398,12 @@ const ChatComponent = () => {
     // Remove espaços extras e limpa o conteúdo
     const cleanContent = mainContent.trim();
     
-    navigator.clipboard.writeText(cleanContent)
+    // Remove as dicas de hashtags se existirem
+    const contentWithoutTips = cleanContent.replace(/💡.*$/gm, '').trim();
+    
+    navigator.clipboard.writeText(contentWithoutTips)
       .then(() => {
-        notify.success('chat.copied');
+        notify.success(t('chat.copied'));
         setCopiedMessageId(messageId);
         // Reset o estado após 2 segundos
         setTimeout(() => {
@@ -1405,7 +1412,7 @@ const ChatComponent = () => {
       })
       .catch(err => {
         console.error('Erro ao copiar:', err);
-        notify.error('chat.copyError');
+        notify.error(t('common.error'));
       });
   };
 
@@ -1573,6 +1580,22 @@ const ChatComponent = () => {
                               )}
                             </button>
                             <button className="hover:text-blue-300 transition-colors" onClick={() => setCommentModal({ open: true, message: { id: msg.id, content: msg.content } })}><FaRegCommentDots className="text-lg text-white" /></button>
+                            {isPostResponse(msg.content) && (
+                              <button
+                                className="hover:text-blue-300 transition-colors relative group"
+                                onClick={() => handleCopyContent(msg.content, msg.id)}
+                                title={t('chat.copy') || 'Copiar'}
+                              >
+                                {copiedMessageId === msg.id ? (
+                                  <div className="flex flex-col items-center">
+                                    <FaCheck className="text-lg text-green-400" />
+                                    <span className="text-xs text-green-400 mt-1">{t('chat.copied') || 'Copiado!'}</span>
+                                  </div>
+                                ) : (
+                                  <FaCopy className="text-lg text-white" />
+                                )}
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
