@@ -9,6 +9,7 @@ import { useTranslation, Language } from '../../lib/i18n';
 import TypewriterEffect from '../../components/TypewriterEffect';
 import CommentModal from '../../components/CommentModal';
 import VoiceModal from '../../components/VoiceModal';
+import TypingIndicator from '../../components/TypingIndicator';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
@@ -91,6 +92,7 @@ const ChatComponent = () => {
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const notify = useNotification();
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
 
   const handleScroll = () => {
@@ -410,6 +412,7 @@ const ChatComponent = () => {
     setMessages((prev) => [...prev, userMsg]);
     setNewMessage('');
     setLoading(true);
+    setIsTyping(true);
 
     let platform = selectedPlatform || extractPlatform(newMessage);
     let topic = postTopic;
@@ -486,6 +489,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -548,6 +552,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -585,6 +590,7 @@ const ChatComponent = () => {
           ]);
         } finally {
           setLoading(false);
+          setIsTyping(false);
         }
       }
       return;
@@ -621,6 +627,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1201,6 +1208,7 @@ const ChatComponent = () => {
     };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
+    setIsTyping(true);
 
     let platform = selectedPlatform || extractPlatform(tooltip);
     let topic = postTopic;
@@ -1271,6 +1279,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1307,6 +1316,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1342,6 +1352,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1548,6 +1559,16 @@ const ChatComponent = () => {
                   )}
                 </div>
               ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="flex flex-col items-end mr-2 justify-center">
+                    <FaRobot className="text-3xl text-white" />
+                  </div>
+                  <div className="rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group mr-2">
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
               {!isNearBottom && showScrollButton && (
                 <button
                   onClick={scrollToBottom}
