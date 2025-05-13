@@ -8,6 +8,7 @@
     "delete": "Eliminar",
     "edit": "Editar",
     "confirm": "Confirmar",
+    "close": "Cerrar",
     "notifications": {
       "success": "Éxito",
       "error": "Error",
@@ -47,7 +48,8 @@
       "Escribir un post destacando al equipo para Instagram",
       "Crear un post de testimonio de cliente para Facebook",
       "Escribir un post de liderazgo de pensamiento para LinkedIn"
-    ]
+    ],
+    "imagePreview": "Vista Previa de la Imagen"
   },
   "settings": {
     "title": "Configuración",

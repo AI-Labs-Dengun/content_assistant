@@ -8,6 +8,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "confirm": "Confirm",
+    "close": "Close",
     "notifications": {
       "success": "Success",
       "error": "Error",
@@ -47,7 +48,8 @@
       "Write a team spotlight post for Instagram",
       "Create a customer testimonial post for Facebook",
       "Write a thought leadership post for LinkedIn"
-    ]
+    ],
+    "imagePreview": "Image Preview"
   },
   "settings": {
     "title": "Settings",

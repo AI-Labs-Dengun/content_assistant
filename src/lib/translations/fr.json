@@ -8,6 +8,7 @@
     "delete": "Supprimer",
     "edit": "Modifier",
     "confirm": "Confirmer",
+    "close": "Fermer",
     "notifications": {
       "success": "Succès",
       "error": "Erreur",
@@ -47,7 +48,8 @@
       "Écrire un post mettant en avant l'équipe pour Instagram",
       "Créer un post de témoignage client pour Facebook",
       "Écrire un post de leadership d'opinion pour LinkedIn"
-    ]
+    ],
+    "imagePreview": "Aperçu de l'Image"
   },
   "settings": {
     "title": "Paramètres",
