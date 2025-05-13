@@ -2,11 +2,18 @@
   "common": {
     "loading": "Loading...",
     "error": "An error occurred",
-    "retry": "Retry",
+    "retry": "Try again",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "edit": "Edit"
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "notifications": {
+      "success": "Success",
+      "error": "Error",
+      "info": "Information",
+      "loading": "Loading..."
+    }
   },
   "chat": {
     "send": "Send",
@@ -23,6 +30,8 @@
     "greeting": "Hello! How can I help you today?",
     "greetingLoading": "Loading greeting...",
     "fallback": "Sorry, I didn't understand. Could you rephrase your request?",
+    "uploadImage": "Upload Image",
+    "dragAndDropImage": "Drag and drop or click to select an image",
     "voiceMode": {
       "idle": "Voice Mode",
       "recording": "Recording...",
@@ -53,7 +62,7 @@
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm Password",
-    "forgotPassword": "Forgot Password?",
+    "forgotPassword": "Forgot your password?",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
     "signInWithGoogle": "Sign in with Google",
@@ -71,9 +80,29 @@
     "companyPlaceholder": "Enter your company name (optional)",
     "signOut": "Sign Out",
     "confirmEmailTitle": "Confirm your email",
-    "confirmEmailMessage": "Please confirm your email address by clicking the link we sent to your inbox. Once confirmed, click the button below to continue.",
-    "confirmEmailCta": "I have confirmed my email",
-    "confirmEmailError": "Please confirm your email before continuing."
+    "confirmEmailMessage": "Please confirm your email address by clicking the link we sent to your inbox. After confirming, click the button below to continue.",
+    "confirmEmailCta": "I've confirmed my email",
+    "confirmEmailError": "Please confirm your email before continuing.",
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "emailNotConfirmed": "Please confirm your email before signing in",
+      "networkError": "Connection error. Please check your internet",
+      "serverError": "Server error. Please try again later",
+      "tooManyRequests": "Too many attempts. Please wait a few minutes",
+      "invalidEmailFormat": "Invalid email format",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordTooLong": "Password cannot be longer than 72 characters",
+      "emailAlreadyInUse": "This email is already registered",
+      "weakPassword": "Password is too weak. Use letters, numbers, and symbols",
+      "invalidPasswordFormat": "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    },
+    "success": {
+      "signIn": "Successfully signed in! Welcome back",
+      "signUp": "Successfully signed up! Please confirm your email",
+      "signOut": "Successfully signed out",
+      "passwordReset": "Password reset email sent",
+      "emailConfirmed": "Email successfully confirmed"
+    }
   },
   "voice": {
     "title": "Voice Recording",

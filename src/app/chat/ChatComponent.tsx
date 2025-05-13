@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt } from 'react-icons/fa';
+import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
 import { useTheme } from '../providers/ThemeProvider';
 import { useLanguage } from '../../lib/LanguageContext';
@@ -12,6 +12,9 @@ import VoiceModal from '../../components/VoiceModal';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
+import { Toaster } from 'react-hot-toast';
+
+
 const Modal: any = ReactModal;
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const ReactMarkdown = require('react-markdown').default;
@@ -45,6 +48,8 @@ const ChatComponent = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [feedback, setFeedback] = useState<Record<string, 'like' | 'dislike' | undefined>>({});
   const [commentModal, setCommentModal] = useState<{ open: boolean, message?: { id: string, content: string } }>({ open: false });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -71,6 +76,15 @@ const ChatComponent = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const [currentAudioId, setCurrentAudioId] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioProgressInterval = useRef<NodeJS.Timeout | null>(null);
+  const voiceModalRef = useRef<HTMLDivElement>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
@@ -163,15 +177,44 @@ const ChatComponent = () => {
     if (showTooltips) setShowTooltips(false);
   };
 
-  const playTTS = async (text: string, onEnd?: () => void) => {
+  const playTTS = async (text: string, messageId: string, onEnd?: () => void) => {
     if (typeof window === 'undefined') return;
-    setVoiceModalMode('loading');
-    setVoiceModalOpen(true);
-    try {
+    
+    if (currentAudioId === messageId && isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+        setIsPlaying(false);
+        if (audioProgressInterval.current) {
+          clearInterval(audioProgressInterval.current);
+        }
       }
+      return;
+    }
+
+    if (currentAudioId === messageId && !isPlaying && audioRef.current) {
+      audioRef.current.play();
+      setIsPlaying(true);
+      audioProgressInterval.current = setInterval(() => {
+        if (audioRef.current) {
+          const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+          setAudioProgress(progress);
+        }
+      }, 100);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      if (audioProgressInterval.current) {
+        clearInterval(audioProgressInterval.current);
+      }
+    }
+
+    setCurrentAudioId(messageId);
+    setTtsLoadingMsgId(messageId);
+    
+    try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -182,15 +225,47 @@ const ChatComponent = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
+      
+      audio.onplay = () => {
+        setIsPlaying(true);
+        if (!audioProgressInterval.current) {
+          setAudioProgress(0);
+        }
+        setTtsLoadingMsgId(null);
+        audioProgressInterval.current = setInterval(() => {
+          if (audioRef.current) {
+            const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
+            setAudioProgress(progress);
+          }
+        }, 100);
+      };
+      
+      audio.onpause = () => {
+        setIsPlaying(false);
+        if (audioProgressInterval.current) {
+          clearInterval(audioProgressInterval.current);
+          audioProgressInterval.current = null;
+        }
+      };
+      
       audio.onended = () => {
-        setVoiceModalMode('ready-to-record');
+        setIsPlaying(false);
+        setCurrentAudioId(null);
+        setAudioProgress(0);
+        setTtsLoadingMsgId(null);
+        if (audioProgressInterval.current) {
+          clearInterval(audioProgressInterval.current);
+          audioProgressInterval.current = null;
+        }
         if (onEnd) onEnd();
       };
-      setVoiceModalMode('ai-speaking');
+      
       audio.play();
     } catch (err) {
       console.error('TTS error:', err);
-      setVoiceModalMode('ready-to-record');
+      setCurrentAudioId(null);
+      setIsPlaying(false);
+      setTtsLoadingMsgId(null);
       if (onEnd) onEnd();
     }
   };
@@ -529,7 +604,6 @@ const ChatComponent = () => {
   };
 
   const handleToggleRecord = () => {
-    console.log('handleToggleRecord called, current mode:', voiceModalMode);
     handleFirstInteraction();
     if (voiceModalMode === 'ready-to-record') {
       startRecording();
@@ -542,6 +616,7 @@ const ChatComponent = () => {
     console.log('startRecording called');
     if (typeof window === 'undefined') return;
     try {
+      setVoiceError(null);
       setVoiceModalMode('recording');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -557,7 +632,6 @@ const ChatComponent = () => {
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, processing audio...');
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        setAudioUrl(URL.createObjectURL(audioBlob));
         handleAudioSubmit(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -566,11 +640,17 @@ const ChatComponent = () => {
     } catch (err) {
       console.error('Recording error:', err);
       setVoiceModalMode('ready-to-record');
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          setVoiceError('Permissão para usar o microfone foi negada. Por favor, permita o acesso ao microfone nas configurações do seu navegador.');
+        } else {
+          setVoiceError('Erro ao acessar o microfone. Por favor, verifique se seu dispositivo tem um microfone e se as permissões estão corretas.');
+        }
+      }
     }
   };
 
   const stopRecording = () => {
-    console.log('stopRecording called');
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       setVoiceModalMode('thinking');
       mediaRecorderRef.current.stop();
@@ -581,191 +661,13 @@ const ChatComponent = () => {
     setVoiceModalOpen(false);
     setVoiceModalMode('ai-speaking');
     setVoiceMode('idle');
+    setVoiceError(null);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
-    }
-  };
-
-  useEffect(() => {
-    if (messages.length > 0 && messages[messages.length - 1].user === 'bot') {
-      const typeSpeed = 50;
-      const startDelay = 100;
-      const msg = messages[messages.length - 1].content || '';
-      setIsTypewriterActive(true);
-      const timeout = setTimeout(() => {
-        setIsTypewriterActive(false);
-      }, startDelay + msg.length * typeSpeed);
-      return () => clearTimeout(timeout);
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (isTypewriterActive && isNearBottom) {
-      const interval = setInterval(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isTypewriterActive, isNearBottom]);
-
-  const handleTooltipClick = async (tooltip: string) => {
-    handleFirstInteraction();
-    if (!user) return;
-    const userMsg: Message = {
-      id: 'user-' + Date.now(),
-      content: tooltip,
-      user: 'me',
-      created_at: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setLoading(true);
-
-    let platform = selectedPlatform || extractPlatform(tooltip);
-    let topic = postTopic;
-    if (!platform) {
-      setSelectedPlatform(null);
-    } else {
-      setSelectedPlatform(platform);
-    }
-    if (!topic && platform && !extractPlatform(tooltip)) {
-      topic = tooltip;
-      setPostTopic(topic);
-    }
-
-    if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
-      const openaiMessages = [
-        { role: 'system', content: prompt },
-        ...messages.map((msg) => ({
-          role: msg.user === 'me' ? 'user' : 'assistant',
-          content: msg.content
-        })),
-        { role: 'user', content: tooltip }
-      ];
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
-        });
-        const data = await res.json();
-        if (data.reply && data.reply.includes('Tips:')) {
-          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: mainPost.trim(),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: 'bot-' + (Date.now() + 1),
-              content: 'Tips:' + tipsParts.join('Tips:').trim(),
-              user: 'bot',
-              created_at: new Date(Date.now() + 1).toISOString(),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: data.reply || t('chat.fallback'),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (platform && !topic) {
-      setSelectedPlatform(platform);
-      setPostTopic(null);
-      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
-        });
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!platform && tooltip.trim()) {
-      setPostTopic(tooltip);
-      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
-        });
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-      return;
     }
   };
 
@@ -780,7 +682,6 @@ const ChatComponent = () => {
         body: formData,
       });
       const data = await res.json();
-      console.log('Transcription result:', data);
       if (data.text) {
         const userMsg = {
           id: 'user-' + Date.now(),
@@ -807,10 +708,12 @@ const ChatComponent = () => {
             },
           ]);
           if (aiData.reply) {
-            playTTS(aiData.reply, () => {
+            playTTS(aiData.reply, 'bot-' + Date.now(), () => {
+              setVoiceModalOpen(false);
               setVoiceModalMode('ready-to-record');
             });
           } else {
+            setVoiceModalOpen(false);
             setVoiceModalMode('ready-to-record');
           }
         } catch (err) {
@@ -823,15 +726,18 @@ const ChatComponent = () => {
               created_at: new Date().toISOString(),
             },
           ]);
+          setVoiceModalOpen(false);
           setVoiceModalMode('ready-to-record');
         } finally {
           setLoading(false);
         }
       } else {
+        setVoiceModalOpen(false);
         setVoiceModalMode('ready-to-record');
       }
     } catch (err) {
       console.error('Transcription error:', err);
+      setVoiceModalOpen(false);
       setVoiceModalMode('ready-to-record');
     }
   };
@@ -1040,16 +946,234 @@ const ChatComponent = () => {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        settingsOpen &&
+        settingsRef.current &&
+        !settingsRef.current.contains(event.target as Node) &&
+        settingsButtonRef.current &&
+        !settingsButtonRef.current.contains(event.target as Node)
+      ) {
+        setSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].user === 'bot') {
+      const typeSpeed = 50;
+      const startDelay = 100;
+      const msg = messages[messages.length - 1].content || '';
+      setIsTypewriterActive(true);
+      const timeout = setTimeout(() => {
+        setIsTypewriterActive(false);
+      }, startDelay + msg.length * typeSpeed);
+      return () => clearTimeout(timeout);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (isTypewriterActive && isNearBottom) {
+      const interval = setInterval(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [isTypewriterActive, isNearBottom]);
+
+  const handleTooltipClick = async (tooltip: string) => {
+    handleFirstInteraction();
+    if (!user) return;
+    const userMsg: Message = {
+      id: 'user-' + Date.now(),
+      content: tooltip,
+      user: 'me',
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+    setLoading(true);
+
+    let platform = selectedPlatform || extractPlatform(tooltip);
+    let topic = postTopic;
+    if (!platform) {
+      setSelectedPlatform(null);
+    } else {
+      setSelectedPlatform(platform);
+    }
+    if (!topic && platform && !extractPlatform(tooltip)) {
+      topic = tooltip;
+      setPostTopic(topic);
+    }
+
+    if (platform && topic) {
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const openaiMessages = [
+        { role: 'system', content: prompt },
+        ...messages.map((msg) => ({
+          role: msg.user === 'me' ? 'user' : 'assistant',
+          content: msg.content
+        })),
+        { role: 'user', content: tooltip }
+      ];
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: openaiMessages, language }),
+        });
+        const data = await res.json();
+        if (data.reply && data.reply.includes('Tips:')) {
+          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: mainPost.trim(),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+            {
+              id: 'bot-' + (Date.now() + 1),
+              content: 'Tips:' + tipsParts.join('Tips:').trim(),
+              user: 'bot',
+              created_at: new Date(Date.now() + 1).toISOString(),
+            },
+          ]);
+        } else {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: 'bot-' + Date.now(),
+              content: data.reply || t('chat.fallback'),
+              user: 'bot',
+              created_at: new Date().toISOString(),
+            },
+          ]);
+        }
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (platform && !topic) {
+      setSelectedPlatform(platform);
+      setPostTopic(null);
+      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!platform && tooltip.trim()) {
+      setPostTopic(tooltip);
+      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+  };
+
   if (!user) return null;
 
   return (
     <div className="bg-auth-gradient min-h-screen flex items-center justify-center">
       <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-white/30">
-        <header className="p-6 flex justify-between items-center relative border-b border-white/20">
+        <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-white/20">
           <h1 className="text-2xl font-bold text-white drop-shadow">{t('chat.assistantTitle') || 'Assistente IA'}</h1>
           <div className="flex items-center gap-4">
             <div className="relative">
               <button
+                ref={settingsButtonRef}
                 onClick={() => setSettingsOpen((v) => !v)}
                 className="p-2 rounded-full bg-white/30 hover:bg-white/50 text-gray-800 dark:text-white focus:outline-none"
                 aria-label={t('settings.title')}
@@ -1057,7 +1181,10 @@ const ChatComponent = () => {
                 <FaCog className="text-xl text-white" />
               </button>
               {settingsOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md">
+                <div 
+                  ref={settingsRef}
+                  className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md"
+                >
                   <button
                     onClick={toggleTheme}
                     className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 rounded-t-xl"
@@ -1108,7 +1235,7 @@ const ChatComponent = () => {
                     </div>
                   )}
                   <div
-                    className={`rounded-xl px-5 py-3 pb-6 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
                     <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'me' && msg.image ? (
@@ -1137,7 +1264,7 @@ const ChatComponent = () => {
                         <span>{msg.content}</span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-5 pb-1 pt-3 relative justify-between">
+                    <div className="flex items-center gap-2 mt-5 pb-1 relative justify-between">
                       <div className="flex items-center gap-2">
                         {msg.user === 'bot' && (
                           <>
@@ -1154,18 +1281,42 @@ const ChatComponent = () => {
                               <FaRegThumbsDown className="text-lg" />
                             </button>
                             <button
-                              className={`hover:text-blue-300 transition-colors`}
+                              className={`hover:text-blue-300 transition-colors relative group`}
                               onClick={async () => {
-                                setTtsLoadingMsgId(msg.id);
-                                await playTTS(msg.content, () => setTtsLoadingMsgId(null));
-                                setTtsLoadingMsgId(null);
+                                if (currentAudioId === msg.id && isPlaying) {
+                                  if (audioRef.current) {
+                                    audioRef.current.pause();
+                                  }
+                                } else {
+                                  await playTTS(msg.content, msg.id);
+                                }
                               }}
                               disabled={ttsLoadingMsgId === msg.id}
                             >
                               {ttsLoadingMsgId === msg.id ? (
                                 <span className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-500 inline-block"></span>
                               ) : (
-                                <FaVolumeUp className="text-lg text-white" />
+                                <>
+                                  {currentAudioId === msg.id ? (
+                                    isPlaying ? (
+                                      <FaPause className="text-lg text-white" />
+                                    ) : (
+                                      <FaPlay className="text-lg text-white" />
+                                    )
+                                  ) : (
+                                    <FaVolumeUp className="text-lg text-white" />
+                                  )}
+
+                                  {/* Barra de reprodução de audio */}
+                                  {currentAudioId === msg.id && (
+                                    <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-white/20">
+                                      <div 
+                                        className="absolute bottom-0 z-10 h-full bg-blue-400 mt-1 transition-all duration-100"
+                                        style={{ width: `${audioProgress}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </button>
                             <button className="hover:text-blue-300 transition-colors" onClick={() => setCommentModal({ open: true, message: { id: msg.id, content: msg.content } })}><FaRegCommentDots className="text-lg text-white" /></button>
@@ -1189,7 +1340,7 @@ const ChatComponent = () => {
         {showTooltips && tooltips.length > 0 && (
           <div className="w-full px-6">
             <div className="w-full border-t border-white/30 mb-4" />
-            <div className="flex flex-col gap-2 mb-4 items-center w-full md:hidden">
+            <div className="flex flex-col gap-2 mb-2 items-center w-full md:hidden">
               <button
                 className="w-full flex-1 px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors text-center"
                 onClick={() => setShowTooltipsModal(true)}
@@ -1202,7 +1353,7 @@ const ChatComponent = () => {
                 {tooltips.slice(0, 2).map((tip, idx) => (
                   <button
                     key={idx}
-                    className="flex-1 px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
                     onClick={() => handleTooltipClick(tip)}
                   >
                     {tip}
@@ -1213,7 +1364,7 @@ const ChatComponent = () => {
                 {tooltips.slice(2, 4).map((tip, idx) => (
                   <button
                     key={idx+2}
-                    className="flex-1 px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
                     onClick={() => handleTooltipClick(tip)}
                   >
                     {tip}
@@ -1249,13 +1400,14 @@ const ChatComponent = () => {
             )}
           </div>
         )}
-        <footer className="w-full p-6 border-t border-white/20">
+        <footer className="w-full p-3">
           <form
             onSubmit={handleSendMessage}
             className="flex items-center gap-3 bg-transparent rounded-2xl px-4 py-2 shadow-md border border-white/30 relative"
           >
             <div className="flex items-center w-full">
               <button
+                ref={emojiButtonRef}
                 type="button"
                 className="hidden md:inline-flex text-xl text-white hover:text-gray-200 mr-2"
                 onClick={() => setShowEmojiPicker((v) => !v)}
@@ -1272,7 +1424,6 @@ const ChatComponent = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 disabled={loading}
                 style={{ background: 'transparent' }}
-                onBlur={() => setTimeout(() => setShowEmojiPicker(false), 200)}
               />
               <button
                 type="submit"
@@ -1285,14 +1436,8 @@ const ChatComponent = () => {
                 type="button"
                 className="text-xl text-white hover:text-gray-200 ml-2"
                 onClick={() => {
-                  const lastBotMsg = [...messages].reverse().find(m => m.user === 'bot');
-                  if (lastBotMsg) {
-                    setVoiceModalMode('loading');
-                    setVoiceModalOpen(true);
-                    playTTS(lastBotMsg.content, () => {
-                      setVoiceModalMode('ready-to-record');
-                    });
-                  }
+                  setVoiceModalOpen(true);
+                  setVoiceModalMode('ready-to-record');
                 }}
               >
                 <FaMicrophone />
@@ -1319,14 +1464,17 @@ const ChatComponent = () => {
               </button>
             </div>
             {showEmojiPicker && (
-              <div className="absolute bottom-12 left-0 z-50">
+              <div 
+                ref={emojiPickerRef}
+                className="absolute bottom-12 left-0 z-50"
+              >
                 <EmojiPicker
                   data={data}
                   theme={dark ? 'dark' : 'light'}
                   onEmojiSelect={(e: any) => {
                     insertEmoji(e.native);
-                    setShowEmojiPicker(false);
                   }}
+                  previewPosition="none"
                 />
               </div>
             )}
@@ -1342,51 +1490,115 @@ const ChatComponent = () => {
           }
         }}
       />
-      <VoiceModal
-        isOpen={voiceModalOpen}
-        onClose={handleVoiceModalClose}
-        onSubmit={handleAudioSubmit}
-        mode={voiceModalMode}
-        onToggleRecord={handleToggleRecord}
-      />
       <Modal
         isOpen={imageModalOpen}
         onRequestClose={handleImageModalClose}
         className="fixed inset-0 flex items-center justify-center z-50"
-        overlayClassName="fixed inset-0 bg-black/60 z-40"
+        overlayClassName="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer"
         ariaHideApp={false}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        closeTimeoutMS={200}
+        onOverlayClick={handleImageModalClose}
+        overlayElement={(props: React.HTMLAttributes<HTMLDivElement>, contentElement: React.ReactNode) => (
+          <div {...props} onClick={handleImageModalClose}>
+            {contentElement}
+          </div>
+        )}
       >
-        <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md">
-          <h2 className="text-lg font-bold mb-2 text-gray-800">Upload Image</h2>
+        <div 
+          className="bg-auth-gradient rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-white/30 shadow-2xl transform transition-all duration-200 ease-in-out"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center w-full mb-2">
+            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.uploadImage') || 'Upload de Imagem'}</h2>
+            <button
+              onClick={handleImageModalClose}
+              className="text-white/70 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+              aria-label={t('common.cancel') || 'Fechar'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           <div
-            className="w-full h-40 border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center cursor-pointer bg-gray-50"
+            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${
+              imagePreview 
+                ? 'border-white/30 bg-white/5' 
+                : 'border-white/30 bg-white/5 hover:bg-white/10'
+            }`}
             onDrop={handleImageDrop}
             onDragOver={e => e.preventDefault()}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
           >
             {imagePreview ? (
-              <img src={imagePreview} alt="Preview" className="max-h-36 max-w-full object-contain" />
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  className="max-h-44 max-w-full object-contain rounded-lg" 
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setUploadedImage(null);
+                    setImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+                  aria-label={t('common.delete') || 'Remover imagem'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             ) : (
-              <span className="text-gray-400">Drag & drop or click to select an image</span>
+              <div className="flex flex-col items-center gap-2 text-white/70">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5z" />
+                  <circle cx="8.25" cy="9.75" r="1.25" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.5l-5.25-5.25a2.25 2.25 0 00-3.182 0L3 21" />
+                </svg>
+                <span className="text-center px-4">{t('chat.dragAndDropImage') || 'Arraste e solte ou clique para selecionar uma imagem'}</span>
+              </div>
             )}
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-3 mt-4 w-full">
             <button
-              className="px-4 py-2 rounded bg-blue-600 text-white font-semibold hover:bg-blue-700"
-              onClick={handleImageConfirm}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleImageConfirm();
+              }}
               disabled={!uploadedImage}
             >
-              Confirm
+              {t('common.confirm') || 'Confirmar'}
             </button>
             <button
-              className="px-4 py-2 rounded bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400"
-              onClick={handleImageModalClose}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleImageModalClose();
+              }}
             >
-              Cancel
+              {t('common.cancel') || 'Cancelar'}
             </button>
           </div>
         </div>
       </Modal>
+      <VoiceModal
+        isOpen={voiceModalOpen && (voiceModalMode === 'ready-to-record' || voiceModalMode === 'recording')}
+        onClose={handleVoiceModalClose}
+        onSubmit={handleAudioSubmit}
+        mode={voiceModalMode}
+        onToggleRecord={handleToggleRecord}
+        modalRef={voiceModalRef}
+        error={voiceError}
+      />
     </div>
   );
 };

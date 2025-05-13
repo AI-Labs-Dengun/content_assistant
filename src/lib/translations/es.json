@@ -2,31 +2,40 @@
   "common": {
     "loading": "Cargando...",
     "error": "Ha ocurrido un error",
-    "retry": "Reintentar",
+    "retry": "Intentar de nuevo",
     "save": "Guardar",
     "cancel": "Cancelar",
     "delete": "Eliminar",
-    "edit": "Editar"
+    "edit": "Editar",
+    "confirm": "Confirmar",
+    "notifications": {
+      "success": "Éxito",
+      "error": "Error",
+      "info": "Información",
+      "loading": "Cargando..."
+    }
   },
   "chat": {
     "send": "Enviar",
     "typeMessage": "Escribe un mensaje...",
-    "newChat": "Nuevo Chat",
-    "deleteChat": "Eliminar Chat",
-    "renameChat": "Renombrar Chat",
+    "newChat": "Nueva Conversación",
+    "deleteChat": "Eliminar Conversación",
+    "renameChat": "Renombrar Conversación",
     "addComment": "Añadir Comentario",
     "writeComment": "Escribe tu comentario...",
     "submit": "Enviar",
     "like": "Me gusta",
     "dislike": "No me gusta",
     "comment": "Comentar",
-    "greeting": "¡Hola! ¿En qué puedo ayudarte hoy?",
+    "greeting": "¡Hola! ¿Cómo puedo ayudarte hoy?",
     "greetingLoading": "Cargando saludo...",
-    "fallback": "Lo siento, no entendí. ¿Puedes reformular tu solicitud?",
+    "fallback": "Lo siento, no entendí. ¿Podrías reformular tu solicitud?",
+    "uploadImage": "Subir Imagen",
+    "dragAndDropImage": "Arrastra y suelta o haz clic para seleccionar una imagen",
     "voiceMode": {
-      "idle": "Modo Voz",
+      "idle": "Modo de Voz",
       "recording": "Grabando...",
-      "aiSpeaking": "IA Hablando..."
+      "aiSpeaking": "IA hablando..."
     },
     "assistantTitle": "Asistente IA",
     "tooltips": [
@@ -34,10 +43,10 @@
       "Escribir un post sobre nuestros servicios para LinkedIn",
       "Crear un post atractivo sobre una nueva función para Facebook",
       "Escribir un post promocional para un evento en Instagram",
-      "Crear un post de anuncio de empresa para LinkedIn",
+      "Crear un post de anuncio de la empresa para LinkedIn",
       "Escribir un post destacando al equipo para Instagram",
       "Crear un post de testimonio de cliente para Facebook",
-      "Escribir un post de liderazgo de opinión para LinkedIn"
+      "Escribir un post de liderazgo de pensamiento para LinkedIn"
     ]
   },
   "settings": {
@@ -48,9 +57,9 @@
     "lightMode": "Modo Claro"
   },
   "auth": {
-    "signIn": "Iniciar Sesión",
+    "signIn": "Iniciar sesión",
     "signUp": "Registrarse",
-    "email": "Correo Electrónico",
+    "email": "Correo electrónico",
     "password": "Contraseña",
     "confirmPassword": "Confirmar Contraseña",
     "forgotPassword": "¿Olvidaste tu contraseña?",
@@ -59,26 +68,46 @@
     "signInWithGoogle": "Iniciar sesión con Google",
     "signUpWithGoogle": "Registrarse con Google",
     "or": "o",
-    "invalidEmail": "Por favor ingresa un correo válido",
+    "invalidEmail": "Por favor, introduce un correo electrónico válido",
     "invalidPassword": "La contraseña debe tener al menos 6 caracteres",
     "passwordsDontMatch": "Las contraseñas no coinciden",
     "signInError": "Error al iniciar sesión",
     "signUpError": "Error al registrarse",
-    "signInSuccess": "Sesión iniciada exitosamente",
-    "signUpSuccess": "Registro exitoso",
+    "signInSuccess": "Sesión iniciada con éxito",
+    "signUpSuccess": "Registro completado con éxito",
     "name": "Nombre",
     "company": "Empresa (Opcional)",
-    "companyPlaceholder": "Ingresa el nombre de tu empresa (opcional)",
+    "companyPlaceholder": "Escribe el nombre de tu empresa (opcional)",
     "signOut": "Cerrar sesión",
     "confirmEmailTitle": "Confirma tu correo electrónico",
-    "confirmEmailMessage": "Por favor, confirma tu dirección de correo electrónico haciendo clic en el enlace que te enviamos. Una vez confirmado, haz clic en el botón de abajo para continuar.",
-    "confirmEmailCta": "Ya he confirmado mi correo",
-    "confirmEmailError": "Por favor, confirma tu correo antes de continuar."
+    "confirmEmailMessage": "Por favor, confirma tu dirección de correo electrónico haciendo clic en el enlace que te enviamos a tu bandeja de entrada. Después de confirmar, haz clic en el botón de abajo para continuar.",
+    "confirmEmailCta": "He confirmado mi correo electrónico",
+    "confirmEmailError": "Por favor, confirma tu correo electrónico antes de continuar.",
+    "errors": {
+      "invalidCredentials": "Correo electrónico o contraseña incorrectos",
+      "emailNotConfirmed": "Por favor, confirma tu correo electrónico antes de iniciar sesión",
+      "networkError": "Error de conexión. Por favor, verifica tu internet",
+      "serverError": "Error del servidor. Por favor, inténtalo de nuevo más tarde",
+      "tooManyRequests": "Demasiados intentos. Por favor, espera unos minutos",
+      "invalidEmailFormat": "Formato de correo electrónico inválido",
+      "passwordTooShort": "La contraseña debe tener al menos 6 caracteres",
+      "passwordTooLong": "La contraseña no puede tener más de 72 caracteres",
+      "emailAlreadyInUse": "Este correo electrónico ya está registrado",
+      "weakPassword": "La contraseña es muy débil. Usa letras, números y símbolos",
+      "invalidPasswordFormat": "La contraseña debe contener al menos una letra mayúscula, una minúscula y un número"
+    },
+    "success": {
+      "signIn": "¡Sesión iniciada con éxito! Bienvenido de nuevo",
+      "signUp": "¡Registro completado con éxito! Por favor, confirma tu correo electrónico",
+      "signOut": "Sesión cerrada con éxito",
+      "passwordReset": "Correo de recuperación de contraseña enviado",
+      "emailConfirmed": "Correo electrónico confirmado con éxito"
+    }
   },
   "voice": {
     "title": "Grabación de Voz",
-    "aiSpeaking": "IA Hablando...",
-    "aiThinking": "IA Pensando...",
+    "aiSpeaking": "IA hablando...",
+    "aiThinking": "IA pensando...",
     "loading": "Cargando audio...",
     "start": "Iniciar Grabación",
     "stop": "Detener Grabación"
