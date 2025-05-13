@@ -767,6 +767,7 @@ const ChatComponent = () => {
 
   const handleAudioSubmit = async (audioBlob: Blob) => {
     setVoiceModalMode('thinking');
+    setIsTyping(true);
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
@@ -824,15 +825,18 @@ const ChatComponent = () => {
           setVoiceModalMode('ready-to-record');
         } finally {
           setLoading(false);
+          setIsTyping(false);
         }
       } else {
         setVoiceModalOpen(false);
         setVoiceModalMode('ready-to-record');
+        setIsTyping(false);
       }
     } catch (err) {
       console.error('Transcription error:', err);
       setVoiceModalOpen(false);
       setVoiceModalMode('ready-to-record');
+      setIsTyping(false);
     }
   };
 
@@ -870,7 +874,9 @@ const ChatComponent = () => {
 
   const handleImageConfirm = async () => {
     if (!uploadedImage) return;
+    handleFirstInteraction();
     setLoading(true);
+    setIsTyping(true);
     setImageModalOpen(false);
 
     // Extrai plataforma e tópico do texto fornecido
@@ -939,6 +945,7 @@ const ChatComponent = () => {
         },
       ]);
       setLoading(false);
+      setIsTyping(false);
       setUploadedImage(null);
       setImagePreview(null);
       return;
@@ -1017,6 +1024,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
         setUploadedImage(null);
         setImagePreview(null);
         setImageText('');
@@ -1076,6 +1084,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
         setUploadedImage(null);
         setImagePreview(null);
         setImageText('');
@@ -1134,6 +1143,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
         setUploadedImage(null);
         setImagePreview(null);
         setImageText('');
