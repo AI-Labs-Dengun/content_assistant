@@ -93,6 +93,8 @@ const ChatComponent = () => {
   const notify = useNotification();
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
 
   const handleScroll = () => {
@@ -1407,6 +1409,16 @@ const ChatComponent = () => {
       });
   };
 
+  const handleImageClick = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setImageViewerOpen(true);
+  };
+
+  const handleImageViewerClose = () => {
+    setImageViewerOpen(false);
+    setSelectedImage(null);
+  };
+
   if (!user) return null;
 
   return (
@@ -1488,7 +1500,12 @@ const ChatComponent = () => {
                       {msg.user === 'me' && msg.image ? (
                         <div className="flex flex-col items-center" style={{ width: '100%' }}>
                           <div className="max-w-xs w-full">
-                            <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2 w-full" />
+                            <img 
+                              src={msg.image} 
+                              alt="User upload" 
+                              className="max-w-xs max-h-60 rounded-lg mb-2 w-full cursor-pointer hover:opacity-90 transition-opacity" 
+                              onClick={() => handleImageClick(msg.image!)}
+                            />
                             <div className="break-words w-full block" style={{ wordBreak: 'break-word' }}>
                               <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
@@ -1579,7 +1596,7 @@ const ChatComponent = () => {
                   </div>
                 </div>
               )}
-              {!isNearBottom && showScrollButton && (
+              {!isNearBottom && showScrollButton && !imageViewerOpen && (
                 <button
                   onClick={scrollToBottom}
                   className="fixed bottom-24 right-2 md:right-auto md:left-1/2 md:transform md:-translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-200 z-50"
@@ -1875,6 +1892,54 @@ const ChatComponent = () => {
         modalRef={voiceModalRef}
         error={voiceError}
       />
+
+      {/* Modal de Visualização de Imagem */}
+      <Modal
+        isOpen={imageViewerOpen}
+        onRequestClose={handleImageViewerClose}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer"
+        ariaHideApp={false}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        closeTimeoutMS={0}
+        onOverlayClick={handleImageViewerClose}
+      >
+        <div 
+          className="relative bg-auth-gradient rounded-2xl p-4 max-w-2xl w-[90vw] border border-white/30 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.imagePreview') || 'Visualização da Imagem'}</h2>
+            <button
+              onClick={handleImageViewerClose}
+              className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+              aria-label={t('common.close') || 'Fechar'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {selectedImage && (
+            <div className="relative w-full aspect-square md:aspect-auto md:h-[60vh] bg-black/20 rounded-xl overflow-hidden">
+              <img
+                src={selectedImage}
+                alt="Full size"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleImageViewerClose}
+              className="px-4 py-2 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors"
+            >
+              {t('common.close') || 'Fechar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
