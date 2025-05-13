@@ -28,6 +28,8 @@
     "like": "Like",
     "dislike": "Dislike",
     "comment": "Comment",
+    "copy": "Copy",
+    "copied": "Copied!",
     "greeting": "Hello! How can I help you today?",
     "greetingLoading": "Loading greeting...",
     "fallback": "Sorry, I didn't understand. Could you rephrase your request?",
