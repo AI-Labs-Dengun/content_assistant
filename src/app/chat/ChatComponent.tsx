@@ -66,6 +66,7 @@ const ChatComponent = () => {
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [userScrolled, setUserScrolled] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   const [ttsLoadingMsgId, setTtsLoadingMsgId] = useState<string | null>(null);
@@ -103,12 +104,17 @@ const ChatComponent = () => {
     if (!atBottom) {
       setShouldAutoScroll(false);
       setUserScrolled(true);
+      // Adiciona delay para mostrar o botão
+      setTimeout(() => {
+        setShowScrollButton(true);
+      }, 1500);
     }
 
     // Se o usuário rolar até o final, reative o auto-scroll
     if (atBottom) {
       setShouldAutoScroll(true);
       setUserScrolled(false);
+      setShowScrollButton(false);
     }
 
     setIsNearBottom(atBottom);
@@ -1447,6 +1453,7 @@ const ChatComponent = () => {
                   key={msg.id}
                   className={`flex ${msg.user === 'me' ? 'justify-end' : 'justify-start'}`}
                 >
+                  {/* Mensagem do bot para o usuário */}
                   {msg.user === 'bot' && (
                     <div className="flex flex-col items-end mr-2 justify-center">
                       <FaRobot className="text-3xl text-white" />
@@ -1455,52 +1462,23 @@ const ChatComponent = () => {
                   <div
                     className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
+                    {/* Mensagem do usuário para o bot */}
                     <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'me' && msg.image ? (
-                        <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2" />
-                      ) : null}
-                      {msg.user === 'bot' ? (
-                        <div className="relative">
-                          <ReactMarkdown
-                            components={{
-                              p({ node, children, ...props }: any) {
-                                return <p {...props}>{children}</p>;
-                              },
-                              strong({ node, children, ...props }: any) {
-                                return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
-                              },
-                              h1({ children, ...props }: any) {
-                                return <div className="font-bold text-xl mb-2">{children}</div>;
-                              },
-                              h2({ children, ...props }: any) {
-                                return <div className="font-bold text-lg mb-2">{children}</div>;
-                              },
-                              hr({ node, ...props }: any) {
-                                return <hr className="my-4 border-gray-600" {...props} />;
-                              }
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
-                          {isPostResponse(msg.content) && (
-                            <div className="absolute top-0 right-2 flex flex-col items-center gap-1">
-                              <button
-                                onClick={() => handleCopyContent(msg.content, msg.id)}
-                                className="text-white/70 hover:text-white transition-colors z-10"
-                                title={t('chat.copy') || 'Copiar'}
-                              >
-                                <FaCopy className="text-lg" />
-                              {copiedMessageId === msg.id && (
-                                <FaCheck className="text-xs text-green-500 -top-1 z-20" />
-                              )}
-                              </button>
+                        <div className="flex flex-col items-center" style={{ width: '100%' }}>
+                          <div className="max-w-xs w-full">
+                            <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2 w-full" />
+                            <div className="break-words w-full block" style={{ wordBreak: 'break-word' }}>
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
-                          )}
+                          </div>
                         </div>
                       ) : (
-                        <span>{msg.content}</span>
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
                       )}
                     </div>
+
+                    {/* Botão de feedback e reprodução de audio */}
                     <div className="flex items-center gap-2 mt-5 pb-1 relative justify-between">
                       <div className="flex items-center gap-2">
                         {msg.user === 'bot' && (
@@ -1570,10 +1548,10 @@ const ChatComponent = () => {
                   )}
                 </div>
               ))}
-              {!isNearBottom && (
+              {!isNearBottom && showScrollButton && (
                 <button
                   onClick={scrollToBottom}
-                  className="fixed bottom-24 right-4 md:right-auto md:left-1/2 md:transform md:-translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-200 z-50"
+                  className="fixed bottom-24 right-2 md:right-auto md:left-1/2 md:transform md:-translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-200 z-50"
                   aria-label="Scroll to bottom"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -1824,6 +1802,12 @@ const ChatComponent = () => {
                 className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
                 value={imageText}
                 onChange={(e) => setImageText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && uploadedImage) {
+                    e.preventDefault();
+                    handleImageConfirm();
+                  }
+                }}
                 style={{ background: 'transparent' }}
               />
             </div>
