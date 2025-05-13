@@ -99,11 +99,13 @@ const ChatComponent = () => {
     // Se o usuário rolar para cima, desative o auto-scroll
     if (!atBottom) {
       setShouldAutoScroll(false);
+      setUserScrolled(true);
     }
 
     // Se o usuário rolar até o final, reative o auto-scroll
     if (atBottom) {
       setShouldAutoScroll(true);
+      setUserScrolled(false);
     }
 
     setIsNearBottom(atBottom);
@@ -111,23 +113,23 @@ const ChatComponent = () => {
 
   // Efeito para scroll automático apenas quando necessário
   useEffect(() => {
-    if (shouldAutoScroll && messages.length > 0) {
+    if (shouldAutoScroll && messages.length > 0 && !userScrolled) {
       const timeoutId = setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, shouldAutoScroll]);
+  }, [messages, shouldAutoScroll, userScrolled]);
 
   // Efeito para o typewriter
   useEffect(() => {
-    if (isTypewriterActive && shouldAutoScroll) {
+    if (isTypewriterActive && shouldAutoScroll && !userScrolled) {
       const interval = setInterval(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [isTypewriterActive, shouldAutoScroll]);
+  }, [isTypewriterActive, shouldAutoScroll, userScrolled]);
 
   // Adicione um botão de scroll para baixo quando não estiver no final
   const scrollToBottom = () => {
@@ -936,10 +938,15 @@ const ChatComponent = () => {
       4. Includes a clear call-to-action
       5. Uses relevant hashtags
       6. Maintains an appropriate tone for the platform
-      7. Do not include any instruction labels like "Call-to-Action:" or "Hashtags:" in the final text.
+      7. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the final text.
 
       Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying.
-      For Tips section, use bold text in title and use a vertical, block-style layout.`;
+
+      For Tips section:
+      - Add a horizontal line separator (---)
+      - Use the title in bold
+      - Use a vertical, block-style layout
+      - Keep tips concise and actionable`;
       
       try {
         console.log('Generating post for platform:', platform);
@@ -1415,6 +1422,9 @@ const ChatComponent = () => {
                             h2({ children, ...props }: any) {
                               return <div className="font-bold text-lg mb-2">{children}</div>;
                             },
+                            hr({ node, ...props }: any) {
+                              return <hr className="my-4 border-gray-600" {...props} />;
+                            }
                           }}
                         >
                           {msg.content}
