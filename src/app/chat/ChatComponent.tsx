@@ -92,20 +92,20 @@ const ChatComponent = () => {
   const handleScroll = () => {
     const el = chatContainerRef.current;
     if (!el) return;
-    
+
     const threshold = 100;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
-    
+
     // Se o usuário rolar para cima, desative o auto-scroll
     if (!atBottom) {
       setShouldAutoScroll(false);
     }
-    
+
     // Se o usuário rolar até o final, reative o auto-scroll
     if (atBottom) {
       setShouldAutoScroll(true);
     }
-    
+
     setIsNearBottom(atBottom);
   };
 
@@ -214,7 +214,7 @@ const ChatComponent = () => {
 
   const playTTS = async (text: string, messageId: string, onEnd?: () => void) => {
     if (typeof window === 'undefined') return;
-    
+
     if (currentAudioId === messageId && isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -248,7 +248,7 @@ const ChatComponent = () => {
 
     setCurrentAudioId(messageId);
     setTtsLoadingMsgId(messageId);
-    
+
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -260,7 +260,7 @@ const ChatComponent = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-      
+
       audio.onplay = () => {
         setIsPlaying(true);
         if (!audioProgressInterval.current) {
@@ -274,7 +274,7 @@ const ChatComponent = () => {
           }
         }, 100);
       };
-      
+
       audio.onpause = () => {
         setIsPlaying(false);
         if (audioProgressInterval.current) {
@@ -282,7 +282,7 @@ const ChatComponent = () => {
           audioProgressInterval.current = null;
         }
       };
-      
+
       audio.onended = () => {
         setIsPlaying(false);
         setCurrentAudioId(null);
@@ -294,7 +294,7 @@ const ChatComponent = () => {
         }
         if (onEnd) onEnd();
       };
-      
+
       audio.play();
     } catch (err) {
       console.error('TTS error:', err);
@@ -334,25 +334,25 @@ const ChatComponent = () => {
     // Primeiro, procura por menções diretas à plataforma
     const directMatch = platforms.find((p) => lower.includes(p));
     if (directMatch) return directMatch;
-    
+
     // Se não encontrar menção direta, procura por variações comuns
     const variations: Record<string, string[]> = {
       'linkedin': ['linkedin', 'linked in', 'linked-in'],
       'instagram': ['instagram', 'insta', 'ig'],
       'facebook': ['facebook', 'fb', 'face']
     };
-    
+
     for (const [platform, vars] of Object.entries(variations)) {
       if (vars.some(v => lower.includes(v))) return platform;
     }
-    
+
     return null;
   };
 
   const extractTopic = (text: string, platform: string | null): string | null => {
     if (!text) return null;
     let topic = text;
-    
+
     // Remove menções à plataforma
     if (platform) {
       const variations = {
@@ -365,19 +365,19 @@ const ChatComponent = () => {
         topic = topic.replace(new RegExp(p, 'i'), '').trim();
       });
     }
-    
+
     // Remove palavras comuns de comando
     const commandWords = [
-      'escreva', 'escreve', 'write', 'crie', 'create', 'haz', 'fais', 'erstelle', 
-      'schreibe', 'make', 'generate', 'génère', 'genera', 'criar', 'ajuda', 'help', 
+      'escreva', 'escreve', 'write', 'crie', 'create', 'haz', 'fais', 'erstelle',
+      'schreibe', 'make', 'generate', 'génère', 'genera', 'criar', 'ajuda', 'help',
       'sobre', 'about', 'para', 'for', 'pour', 'für', 'post', 'postar', 'publicar',
       'publish', 'share', 'compartilhar'
     ];
-    
+
     commandWords.forEach(word => {
       topic = topic.replace(new RegExp(`^${word}\\s*`, 'i'), '').trim();
     });
-    
+
     if (topic.length > 2) return topic;
     return null;
   };
@@ -627,7 +627,7 @@ const ChatComponent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageId, type, content }),
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const speak = (text: string) => {
@@ -659,7 +659,7 @@ const ChatComponent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: comment }),
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const insertEmoji = (emoji: string) => {
@@ -694,7 +694,7 @@ const ChatComponent = () => {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      
+
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
@@ -850,18 +850,18 @@ const ChatComponent = () => {
     if (!uploadedImage) return;
     setLoading(true);
     setImageModalOpen(false);
-    
+
     // Extrai plataforma e tópico do texto fornecido
     const platform = selectedPlatform || extractPlatform(imageText);
     const topic = postTopic || extractTopic(imageText, platform);
-    
+
     if (platform) {
       setSelectedPlatform(platform);
     }
     if (topic) {
       setPostTopic(topic);
     }
-    
+
     setMessages((prev) => [
       ...prev,
       {
@@ -884,9 +884,9 @@ const ChatComponent = () => {
         method: 'POST',
         body: formData,
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         console.error('Image analysis failed:', {
           status: res.status,
@@ -896,12 +896,12 @@ const ChatComponent = () => {
         });
         throw new Error(data.error || 'Failed to analyze image');
       }
-      
+
       if (!data.description) {
         console.error('No description in response:', data);
         throw new Error('No description received from image analysis');
       }
-      
+
       description = data.description;
       setImageDescription(description);
       console.log('Image analysis successful');
@@ -936,8 +936,11 @@ const ChatComponent = () => {
       4. Includes a clear call-to-action
       5. Uses relevant hashtags
       6. Maintains an appropriate tone for the platform
+      7. Do not include any instruction labels like "Call-to-Action:" or "Hashtags:" in the final text.
 
-      Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying. Use a vertical, block-style layout.`;
+      Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying.
+      For Tips section, use bold text in title and use a vertical, block-style layout.`;
+      
       try {
         console.log('Generating post for platform:', platform);
         const res = await fetch('/api/chatgpt', {
@@ -945,9 +948,9 @@ const ChatComponent = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: prompt, language }),
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error('Post generation failed:', {
             status: res.status,
@@ -957,12 +960,12 @@ const ChatComponent = () => {
           });
           throw new Error(data.error || 'Failed to generate post');
         }
-        
+
         if (!data.reply) {
           console.error('No reply in response:', data);
           throw new Error('No response received from AI');
         }
-        
+
         console.log('Post generation successful');
         setMessages((prev) => [
           ...prev,
@@ -994,10 +997,10 @@ const ChatComponent = () => {
     } else if (platform) {
       const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
 
-Image Description: ${description}
-Selected Platform: ${platform}
+      Image Description: ${description}
+      Selected Platform: ${platform}
 
-Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
+      Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
       try {
         console.log('Generating topic question...');
         const res = await fetch('/api/chatgpt', {
@@ -1005,9 +1008,9 @@ Ask the user in a friendly, creative, and context-aware way what specific topic 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: followupPrompt, language }),
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error('Question generation failed:', {
             status: res.status,
@@ -1017,12 +1020,12 @@ Ask the user in a friendly, creative, and context-aware way what specific topic 
           });
           throw new Error(data.error || 'Failed to generate follow-up question');
         }
-        
+
         if (!data.reply) {
           console.error('No reply in response:', data);
           throw new Error('No response received from AI');
         }
-        
+
         console.log('Question generation successful');
         setMessages((prev) => [
           ...prev,
@@ -1053,9 +1056,9 @@ Ask the user in a friendly, creative, and context-aware way what specific topic 
     } else {
       const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
 
-Image Description: ${description}
+      Image Description: ${description}
 
-Ask the user in a friendly, creative, and context-aware way which social media platform they would like to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      Ask the user in a friendly, creative, and context-aware way which social media platform they would like to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
       try {
         console.log('Generating platform question...');
         const res = await fetch('/api/chatgpt', {
@@ -1063,9 +1066,9 @@ Ask the user in a friendly, creative, and context-aware way which social media p
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: followupPrompt, language }),
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error('Question generation failed:', {
             status: res.status,
@@ -1075,12 +1078,12 @@ Ask the user in a friendly, creative, and context-aware way which social media p
           });
           throw new Error(data.error || 'Failed to generate follow-up question');
         }
-        
+
         if (!data.reply) {
           console.error('No reply in response:', data);
           throw new Error('No response received from AI');
         }
-        
+
         console.log('Question generation successful');
         setMessages((prev) => [
           ...prev,
@@ -1337,7 +1340,7 @@ Ask the user in a friendly, creative, and context-aware way which social media p
                 <FaCog className="text-xl text-white" />
               </button>
               {settingsOpen && (
-                <div 
+                <div
                   ref={settingsRef}
                   className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md"
                 >
@@ -1400,16 +1403,16 @@ Ask the user in a friendly, creative, and context-aware way which social media p
                       {msg.user === 'bot' ? (
                         <ReactMarkdown
                           components={{
-                            p({node, children, ...props}: any) {
+                            p({ node, children, ...props }: any) {
                               return <p {...props}>{children}</p>;
                             },
-                            strong({node, children, ...props}: any) {
+                            strong({ node, children, ...props }: any) {
                               return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
                             },
-                            h1({children, ...props}: any) {
+                            h1({ children, ...props }: any) {
                               return <div className="font-bold text-xl mb-2">{children}</div>;
                             },
-                            h2({children, ...props}: any) {
+                            h2({ children, ...props }: any) {
                               return <div className="font-bold text-lg mb-2">{children}</div>;
                             },
                           }}
@@ -1466,7 +1469,7 @@ Ask the user in a friendly, creative, and context-aware way which social media p
                                   {/* Barra de reprodução de audio */}
                                   {currentAudioId === msg.id && (
                                     <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-white/20">
-                                      <div 
+                                        <div
                                         className="absolute bottom-0 z-10 h-full bg-blue-400 mt-1 transition-all duration-100"
                                         style={{ width: `${audioProgress}%` }}
                                       />
@@ -1530,7 +1533,7 @@ Ask the user in a friendly, creative, and context-aware way which social media p
               <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
                 {tooltips.slice(2, 4).map((tip, idx) => (
                   <button
-                    key={idx+2}
+                    key={idx + 2}
                     className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
                     onClick={() => handleTooltipClick(tip)}
                   >
@@ -1631,7 +1634,7 @@ Ask the user in a friendly, creative, and context-aware way which social media p
               </button>
             </div>
             {showEmojiPicker && (
-              <div 
+              <div
                 ref={emojiPickerRef}
                 className="absolute bottom-12 left-0 z-50"
               >
@@ -1675,7 +1678,7 @@ Ask the user in a friendly, creative, and context-aware way which social media p
           </div>
         )}
       >
-        <div 
+        <div
           className="bg-auth-gradient rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-white/30 shadow-2xl transform transition-all duration-200 ease-in-out"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1692,11 +1695,10 @@ Ask the user in a friendly, creative, and context-aware way which social media p
             </button>
           </div>
           <div
-            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${
-              imagePreview 
-                ? 'border-white/30 bg-white/5' 
-                : 'border-white/30 bg-white/5 hover:bg-white/10'
-            }`}
+            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${imagePreview
+              ? 'border-white/30 bg-white/5'
+              : 'border-white/30 bg-white/5 hover:bg-white/10'
+              }`}
             onDrop={handleImageDrop}
             onDragOver={e => e.preventDefault()}
             onClick={(e) => {
@@ -1706,10 +1708,10 @@ Ask the user in a friendly, creative, and context-aware way which social media p
           >
             {imagePreview ? (
               <div className="relative w-full h-full flex items-center justify-center">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="max-h-44 max-w-full object-contain rounded-lg" 
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-h-44 max-w-full object-contain rounded-lg"
                 />
                 <button
                   onClick={(e) => {
