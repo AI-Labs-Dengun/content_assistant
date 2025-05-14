@@ -418,18 +418,14 @@ const ChatComponent = () => {
     5. Maintains an appropriate tone for the platform
     6. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the final text
 
-    Format the post with:
-    - A clear title at the top (bold if possible)
-    - Main content
-    - Call-to-action
-    - Hashtags
-
     CRITICAL FORMATTING RULES (MUST BE FOLLOWED IN ALL LANGUAGES):
     1. Start with a brief comment about the post idea (1-2 sentences)
     2. Add a horizontal line (exactly three dashes: ---)
     3. Write the post content
     4. Add another horizontal line (exactly three dashes: ---)
     5. Add the tips section
+    6. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the text
+
 
     The horizontal lines (---) are MANDATORY and must be placed exactly as shown below:
 
@@ -444,7 +440,7 @@ const ChatComponent = () => {
     IMPORTANT: 
     - The horizontal lines (---) are REQUIRED and must be placed exactly as shown above, regardless of the language used. The post content MUST be between these two horizontal lines.
     - Include the tips section in the same message as the post. The tips section should:
-    - Be titled 'TIPS' in italics
+    - Be titled [TIPS] section in italics. Important: the title must be in language of the user.
     - Use a vertical, block-style layout
     - Keep tips concise and actionable
     - Be part of the same message as the post, not a separate message

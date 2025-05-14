@@ -33,6 +33,8 @@ const cleanPostContent = (content: string): string => {
     .replace(/_(.*?)_/g, '$1') // Remove underscores de itálico
     .replace(/\*(.*?)\*/g, '$1') // Remove asteriscos de itálico
     .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
+    .replace(/^\*(Dicas|Tips|Consejos|Conseils|Tipps):\*.*$/gm, '') // Remove títulos de dicas em diferentes idiomas
+    .replace(/^•\s*/gm, '') // Remove marcadores de lista
     .trim();
   
   return contentWithoutFormatting;
