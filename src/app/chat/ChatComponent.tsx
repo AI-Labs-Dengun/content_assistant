@@ -1379,46 +1379,65 @@ const ChatComponent = () => {
   };
 
   const isPostResponse = (content: string) => {
-    // Verifica se é uma resposta de post (contém título em negrito e hashtags)
-    const hasBoldTitle = content.includes('**') || content.includes('__');
+    // Verifica se é uma resposta de post (contém hashtags e não é uma mensagem de saudação)
     const hasHashtags = content.includes('#');
     const isNotGreeting = !content.toLowerCase().includes('olá') && 
                          !content.toLowerCase().includes('oi') && 
                          !content.toLowerCase().includes('bom dia') &&
                          !content.toLowerCase().includes('boa tarde') &&
-                         !content.toLowerCase().includes('boa noite');
+                         !content.toLowerCase().includes('boa noite') &&
+                         !content.toLowerCase().includes('hello') &&
+                         !content.toLowerCase().includes('hi') &&
+                         !content.toLowerCase().includes('good morning') &&
+                         !content.toLowerCase().includes('good afternoon') &&
+                         !content.toLowerCase().includes('good evening');
 
-    return hasBoldTitle && hasHashtags && isNotGreeting;
+    // Verifica se tem pelo menos 2 linhas de conteúdo
+    const hasMultipleLines = content.split('\n').length >= 2;
+
+    return hasHashtags && isNotGreeting && hasMultipleLines;
   };
 
   const handleCopyContent = (content: string, messageId: string) => {
-    // Divide o conteúdo pela linha divisória
-    const [mainContent] = content.split('---');
-    
-    // Remove espaços extras e limpa o conteúdo
-    const cleanContent = mainContent.trim();
-    
-    // Remove as dicas de hashtags se existirem
-    const contentWithoutTips = cleanContent
-      .replace(/💡.*$/gm, '') // Remove dicas de hashtags
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
-      .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
-      .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
-      .trim();
-    
-    navigator.clipboard.writeText(contentWithoutTips)
-      .then(() => {
-        notify.success(t('chat.copied'));
-        setCopiedMessageId(messageId);
-        // Reset o estado após 2 segundos
-        setTimeout(() => {
-          setCopiedMessageId(null);
-        }, 2000);
-      })
-      .catch(err => {
-        console.error('Erro ao copiar:', err);
-        notify.error(t('common.error'));
-      });
+    try {
+      // Divide o conteúdo pela linha divisória
+      const [mainContent] = content.split('---');
+      
+      // Remove espaços extras e limpa o conteúdo
+      const cleanContent = mainContent.trim();
+      
+      // Remove as dicas de hashtags se existirem e limpa a formatação
+      const contentWithoutTips = cleanContent
+        .replace(/💡.*$/gm, '') // Remove dicas de hashtags
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
+        .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
+        .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
+        .replace(/^[#\s]+/gm, '') // Remove # no início das linhas
+        .replace(/\s+/g, ' ') // Remove espaços extras
+        .trim();
+      
+      // Verifica se o conteúdo está vazio após a limpeza
+      if (!contentWithoutTips) {
+        throw new Error('Conteúdo vazio após limpeza');
+      }
+
+      navigator.clipboard.writeText(contentWithoutTips)
+        .then(() => {
+          notify.success(t('chat.copied'));
+          setCopiedMessageId(messageId);
+          // Reset o estado após 2 segundos
+          setTimeout(() => {
+            setCopiedMessageId(null);
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('Erro ao copiar:', err);
+          notify.error(t('common.error'));
+        });
+    } catch (err) {
+      console.error('Erro ao processar conteúdo:', err);
+      notify.error(t('common.error'));
+    }
   };
 
   const handleImageClick = (imageUrl: string) => {
