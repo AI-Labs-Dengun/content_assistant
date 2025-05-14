@@ -51,7 +51,8 @@
       "Criar um post de testemunho de cliente para Facebook",
       "Escrever um post de liderança de pensamento para LinkedIn"
     ],
-    "imagePreview": "Visualização da Imagem"
+    "imagePreview": "Visualização da Imagem",
+    "disclaimer": "O Chat pode cometer erros. Considere verificar informações importantes."
   },
   "settings": {
     "title": "Definições",

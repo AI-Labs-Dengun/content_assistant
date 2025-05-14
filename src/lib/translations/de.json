@@ -17,7 +17,7 @@
   },
   "chat": {
     "send": "Senden",
-    "typeMessage": "Nachricht schreiben...",
+    "typeMessage": "Nachricht eingeben...",
     "newChat": "Neuer Chat",
     "deleteChat": "Chat löschen",
     "renameChat": "Chat umbenennen",
@@ -30,13 +30,13 @@
     "copy": "Kopieren",
     "copied": "Kopiert!",
     "greeting": "Hallo! Wie kann ich Ihnen heute helfen?",
-    "greetingLoading": "Begrüßung wird geladen...",
+    "greetingLoading": "Lade Begrüßung...",
     "fallback": "Entschuldigung, ich habe Sie nicht verstanden. Könnten Sie Ihre Anfrage anders formulieren?",
     "uploadImage": "Bild hochladen",
     "dragAndDropImage": "Ziehen und ablegen oder klicken, um ein Bild auszuwählen",
     "voiceMode": {
       "idle": "Sprachmodus",
-      "recording": "Aufnahme läuft...",
+      "recording": "Aufnahme...",
       "aiSpeaking": "KI spricht..."
     },
     "assistantTitle": "KI-Assistent",
@@ -47,10 +47,11 @@
       "Schreiben Sie einen Werbepost für eine Veranstaltung auf Instagram",
       "Erstellen Sie einen Unternehmensankündigungspost für LinkedIn",
       "Schreiben Sie einen Team-Highlight-Post für Instagram",
-      "Erstellen Sie einen Kundenbewertungspost für Facebook",
+      "Erstellen Sie einen Kundenzeugnispost für Facebook",
       "Schreiben Sie einen Thought-Leadership-Post für LinkedIn"
     ],
-    "imagePreview": "Bildvorschau"
+    "imagePreview": "Bildvorschau",
+    "disclaimer": "Der Chat kann Fehler machen. Bitte überprüfen Sie wichtige Informationen."
   },
   "settings": {
     "title": "Einstellungen",

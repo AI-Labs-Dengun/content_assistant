@@ -1800,6 +1800,9 @@ const ChatComponent = () => {
               </div>
             )}
           </form>
+          <div className="w-full px-6 mb-1 mt-2">
+            <p className="text-xs text-white/60 text-center">{t('chat.disclaimer')}</p>
+          </div>
         </footer>
       </div>
       <CommentModal

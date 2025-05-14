@@ -42,16 +42,17 @@
     },
     "assistantTitle": "AI Assistant",
     "tooltips": [
-      "Create a post for a product launch on Instagram",
+      "Create a product launch post for Instagram",
       "Write a post about our services for LinkedIn",
-      "Create an engaging post for a new feature on Facebook",
-      "Write a promotional post for an upcoming event on Instagram",
+      "Create an engaging post about a new feature for Facebook",
+      "Write a promotional post for an event on Instagram",
       "Create a company announcement post for LinkedIn",
-      "Write a team spotlight post for Instagram",
+      "Write a team highlight post for Instagram",
       "Create a customer testimonial post for Facebook",
       "Write a thought leadership post for LinkedIn"
     ],
-    "imagePreview": "Image Preview"
+    "imagePreview": "Image Preview",
+    "disclaimer": "Chat may make mistakes. Consider verifying important information."
   },
   "settings": {
     "title": "Settings",
