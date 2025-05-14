@@ -1399,7 +1399,12 @@ const ChatComponent = () => {
     const cleanContent = mainContent.trim();
     
     // Remove as dicas de hashtags se existirem
-    const contentWithoutTips = cleanContent.replace(/💡.*$/gm, '').trim();
+    const contentWithoutTips = cleanContent
+      .replace(/💡.*$/gm, '') // Remove dicas de hashtags
+      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
+      .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
+      .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
+      .trim();
     
     navigator.clipboard.writeText(contentWithoutTips)
       .then(() => {
