@@ -15,17 +15,22 @@ const isValidPost = (content: string): boolean => {
 
 // Limpa o conteúdo do post para cópia
 const cleanPostContent = (content: string): string => {
-  // Divide o conteúdo pela linha divisória
-  const [mainContent] = content.split('---');
+  // Divide o conteúdo pelas linhas divisórias
+  const parts = content.split('---');
   
-  // Remove espaços extras e limpa o conteúdo
-  const cleanContent = mainContent.trim();
+  // Se não houver pelo menos duas linhas divisórias, retorna o conteúdo original
+  if (parts.length < 2) {
+    return content.trim();
+  }
   
-  // Remove a formatação de negrito
-  const contentWithoutFormatting = cleanContent
+  // Pega o conteúdo entre as duas primeiras linhas divisórias
+  const mainContent = parts[1].trim();
+  
+  // Remove a formatação de negrito e outros elementos de formatação
+  const contentWithoutFormatting = mainContent
     .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
     .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
-    // .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
+    .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
     .trim();
   
   return contentWithoutFormatting;
@@ -33,7 +38,7 @@ const cleanPostContent = (content: string): string => {
 
 // Função principal para copiar o conteúdo de uma mensagem
 export const copyMessageContent = (content: string): string | null => {
-  try {4
+  try {
     if (!isValidPost(content)) {
       return null;
     }
