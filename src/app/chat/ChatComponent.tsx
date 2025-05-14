@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay, FaCopy, FaCheck } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
@@ -424,7 +424,25 @@ const ChatComponent = () => {
     - Call-to-action
     - Hashtags
 
-    IMPORTANT: Include the tips section in the same message as the post, separated by a horizontal line (---). The tips section should:
+    CRITICAL FORMATTING RULES (MUST BE FOLLOWED IN ALL LANGUAGES):
+    1. Start with a brief comment about the post idea (1-2 sentences)
+    2. Add a horizontal line (exactly three dashes: ---)
+    3. Write the post content
+    4. Add another horizontal line (exactly three dashes: ---)
+    5. Add the tips section
+
+    The horizontal lines (---) are MANDATORY and must be placed exactly as shown below:
+
+    [Your brief comment about the post]
+    ---
+    [Your post content here]
+    ---
+    *Dicas:*
+    • [Your tips here]
+
+    IMPORTANT: 
+    -The horizontal lines (---) are REQUIRED and must be placed exactly as shown above, regardless of the language used. The post content MUST be between these two horizontal lines.
+    - Include the tips section in the same message as the post. The tips section should:
     - Be titled 'Dicas' (or 'Tips') in italics
     - Use a vertical, block-style layout
     - Keep tips concise and actionable
