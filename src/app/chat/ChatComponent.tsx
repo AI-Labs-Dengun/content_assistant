@@ -1474,12 +1474,15 @@ const ChatComponent = () => {
                       {msg.user === 'me' && msg.image ? (
                         <div className="flex flex-col items-center" style={{ width: '100%' }}>
                           <div className="max-w-xs w-full">
-                            <img
-                              src={msg.image}
-                              alt="User upload"
-                              className="max-w-xs max-h-60 rounded-lg mb-2 w-full cursor-pointer hover:opacity-90 transition-opacity"
-                              onClick={() => handleImageClick(msg.image!)}
-                            />
+                            <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-2">
+                              <img
+                                src={msg.image}
+                                alt="User upload"
+                                className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => handleImageClick(msg.image!)}
+                                style={{ maxHeight: '300px' }}
+                              />
+                            </div>
                             <div className="break-words w-full block" style={{ wordBreak: 'break-word' }}>
                               <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
