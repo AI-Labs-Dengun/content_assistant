@@ -56,7 +56,7 @@ const ChatComponent = () => {
   const [feedback, setFeedback] = useState<Record<string, 'like' | 'dislike' | undefined>>({});
   const [commentModal, setCommentModal] = useState<{ open: boolean, message?: { id: string, content: string } }>({ open: false });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [voiceMode, setVoiceMode] = useState<'idle' | 'recording' | 'ai-speaking'>('idle');
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -1679,15 +1679,23 @@ const ChatComponent = () => {
               >
                 <FaRegSmile />
               </button>
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 placeholder={t('chat.typeMessage')}
-                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300 resize-none"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (newMessage.trim() && !loading) {
+                      handleSendMessage(e);
+                    }
+                  }
+                }}
                 disabled={loading}
-                style={{ background: 'transparent' }}
+                style={{ background: 'transparent', minHeight: '40px', maxHeight: '120px' }}
+                rows={1}
               />
               <button
                 type="submit"
