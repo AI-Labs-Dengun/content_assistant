@@ -26,10 +26,12 @@ const cleanPostContent = (content: string): string => {
   // Pega o conteúdo entre as duas primeiras linhas divisórias
   const mainContent = parts[1].trim();
   
-  // Remove a formatação de negrito e outros elementos de formatação
+  // Remove a formatação de negrito, itálico e outros elementos de formatação
   const contentWithoutFormatting = mainContent
     .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
     .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
+    .replace(/_(.*?)_/g, '$1') // Remove underscores de itálico
+    .replace(/\*(.*?)\*/g, '$1') // Remove asteriscos de itálico
     .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
     .trim();
   

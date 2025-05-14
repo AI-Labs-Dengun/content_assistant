@@ -434,19 +434,22 @@ const ChatComponent = () => {
     The horizontal lines (---) are MANDATORY and must be placed exactly as shown below:
 
     [Your brief comment about the post]
+
     ---
     [Your post content here]
     ---
-    *Dicas:*
+    
     • [Your tips here]
 
     IMPORTANT: 
-    -The horizontal lines (---) are REQUIRED and must be placed exactly as shown above, regardless of the language used. The post content MUST be between these two horizontal lines.
+    - The horizontal lines (---) are REQUIRED and must be placed exactly as shown above, regardless of the language used. The post content MUST be between these two horizontal lines.
     - Include the tips section in the same message as the post. The tips section should:
-    - Be titled 'Dicas' (or 'Tips') in italics
+    - Be titled 'TIPS' in italics
     - Use a vertical, block-style layout
     - Keep tips concise and actionable
-    - Be part of the same message as the post, not a separate message`;
+    - Be part of the same message as the post, not a separate message
+
+    REMEMBER: Your response MUST follow this exact format in ALL languages. The horizontal lines (---) are MANDATORY and must be placed exactly as shown.`;
 
     return `${conversationInstructions}\n\n${postFormatInstructions}`;
   };
