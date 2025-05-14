@@ -24,7 +24,7 @@
     "renameChat": "Renommer la Conversation",
     "addComment": "Ajouter un Commentaire",
     "writeComment": "Écrivez votre commentaire...",
-    "submit": "Envoyer",
+    "submit": "Soumettre",
     "like": "J'aime",
     "dislike": "Je n'aime pas",
     "comment": "Commenter",
@@ -51,7 +51,8 @@
       "Créer un post de témoignage client pour Facebook",
       "Écrire un post de leadership d'opinion pour LinkedIn"
     ],
-    "imagePreview": "Aperçu de l'Image"
+    "imagePreview": "Aperçu de l'Image",
+    "disclaimer": "Le Chat peut commettre des erreurs. Veuillez vérifier les informations importantes."
   },
   "settings": {
     "title": "Paramètres",

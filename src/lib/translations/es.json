@@ -38,7 +38,7 @@
     "voiceMode": {
       "idle": "Modo de Voz",
       "recording": "Grabando...",
-      "aiSpeaking": "IA hablando..."
+      "aiSpeaking": "IA Hablando..."
     },
     "assistantTitle": "Asistente IA",
     "tooltips": [
@@ -47,11 +47,12 @@
       "Crear un post atractivo sobre una nueva función para Facebook",
       "Escribir un post promocional para un evento en Instagram",
       "Crear un post de anuncio de la empresa para LinkedIn",
-      "Escribir un post destacando al equipo para Instagram",
+      "Escribir un post destacado del equipo para Instagram",
       "Crear un post de testimonio de cliente para Facebook",
       "Escribir un post de liderazgo de pensamiento para LinkedIn"
     ],
-    "imagePreview": "Vista Previa de la Imagen"
+    "imagePreview": "Vista Previa de la Imagen",
+    "disclaimer": "El Chat puede cometer errores. Considere verificar información importante."
   },
   "settings": {
     "title": "Configuración",
