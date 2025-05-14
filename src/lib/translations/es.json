@@ -8,6 +8,7 @@
     "delete": "Eliminar",
     "edit": "Editar",
     "confirm": "Confirmar",
+    "close": "Cerrar",
     "notifications": {
       "success": "Éxito",
       "error": "Error",
@@ -18,15 +19,17 @@
   "chat": {
     "send": "Enviar",
     "typeMessage": "Escribe un mensaje...",
-    "newChat": "Nueva Conversación",
-    "deleteChat": "Eliminar Conversación",
-    "renameChat": "Renombrar Conversación",
+    "newChat": "Nuevo Chat",
+    "deleteChat": "Eliminar Chat",
+    "renameChat": "Renombrar Chat",
     "addComment": "Añadir Comentario",
     "writeComment": "Escribe tu comentario...",
     "submit": "Enviar",
     "like": "Me gusta",
     "dislike": "No me gusta",
     "comment": "Comentar",
+    "copy": "Copiar",
+    "copied": "¡Copiado!",
     "greeting": "¡Hola! ¿Cómo puedo ayudarte hoy?",
     "greetingLoading": "Cargando saludo...",
     "fallback": "Lo siento, no entendí. ¿Podrías reformular tu solicitud?",
@@ -47,7 +50,8 @@
       "Escribir un post destacando al equipo para Instagram",
       "Crear un post de testimonio de cliente para Facebook",
       "Escribir un post de liderazgo de pensamiento para LinkedIn"
-    ]
+    ],
+    "imagePreview": "Vista Previa de la Imagen"
   },
   "settings": {
     "title": "Configuración",

@@ -8,6 +8,7 @@
     "delete": "Eliminar",
     "edit": "Editar",
     "confirm": "Confirmar",
+    "close": "Fechar",
     "notifications": {
       "success": "Sucesso",
       "error": "Erro",
@@ -27,6 +28,8 @@
     "like": "Gosto",
     "dislike": "Não gosto",
     "comment": "Comentar",
+    "copy": "Copiar",
+    "copied": "Copiado!",
     "greeting": "Olá! Como posso ajudar você hoje?",
     "greetingLoading": "Carregando saudação...",
     "fallback": "Desculpe, não entendi. Pode reformular sua solicitação?",
@@ -47,7 +50,8 @@
       "Escrever um post de destaque da equipa para Instagram",
       "Criar um post de testemunho de cliente para Facebook",
       "Escrever um post de liderança de pensamento para LinkedIn"
-    ]
+    ],
+    "imagePreview": "Visualização da Imagem"
   },
   "settings": {
     "title": "Definições",

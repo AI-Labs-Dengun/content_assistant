@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay } from 'react-icons/fa';
+import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay, FaCopy, FaCheck } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
 import { useTheme } from '../providers/ThemeProvider';
 import { useLanguage } from '../../lib/LanguageContext';
@@ -9,10 +9,12 @@ import { useTranslation, Language } from '../../lib/i18n';
 import TypewriterEffect from '../../components/TypewriterEffect';
 import CommentModal from '../../components/CommentModal';
 import VoiceModal from '../../components/VoiceModal';
+import TypingIndicator from '../../components/TypingIndicator';
 import dynamic from 'next/dynamic';
 import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
 import { Toaster } from 'react-hot-toast';
+import { useNotification } from '../../lib/hooks/useNotification';
 
 
 const Modal: any = ReactModal;
@@ -63,6 +65,9 @@ const ChatComponent = () => {
   const [greetingLoading, setGreetingLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const [userScrolled, setUserScrolled] = useState(false);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const [isTypewriterActive, setIsTypewriterActive] = useState(false);
   const [ttsLoadingMsgId, setTtsLoadingMsgId] = useState<string | null>(null);
@@ -76,6 +81,7 @@ const ChatComponent = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageDescription, setImageDescription] = useState<string | null>(null);
+  const [imageText, setImageText] = useState('');
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [currentAudioId, setCurrentAudioId] = useState<string | null>(null);
@@ -84,21 +90,69 @@ const ChatComponent = () => {
   const audioProgressInterval = useRef<NodeJS.Timeout | null>(null);
   const voiceModalRef = useRef<HTMLDivElement>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+  const notify = useNotification();
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
 
   const handleScroll = () => {
     const el = chatContainerRef.current;
     if (!el) return;
+
     const threshold = 100;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+
+    // Se o usuário rolar para cima, desative o auto-scroll
+    if (!atBottom) {
+      setShouldAutoScroll(false);
+      setUserScrolled(true);
+      // Adiciona delay para mostrar o botão
+      setTimeout(() => {
+        setShowScrollButton(true);
+      }, 1500);
+    }
+
+    // Se o usuário rolar até o final, reative o auto-scroll
+    if (atBottom) {
+      setShouldAutoScroll(true);
+      setUserScrolled(false);
+      setShowScrollButton(false);
+    }
+
     setIsNearBottom(atBottom);
   };
 
+  // Efeito para scroll automático apenas quando necessário
   useEffect(() => {
-    if (isNearBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (shouldAutoScroll && messages.length > 0 && !userScrolled && !isTypewriterActive) {
+      const timeoutId = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timeoutId);
     }
-  }, [messages, isNearBottom]);
+  }, [messages, shouldAutoScroll, userScrolled, isTypewriterActive]);
+
+  // Efeito para o typewriter
+  useEffect(() => {
+    if (isTypewriterActive && shouldAutoScroll && !userScrolled) {
+      // Reduz a frequência do scroll automático durante o typewriter
+      const interval = setInterval(() => {
+        if (messagesEndRef.current && isNearBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500); // Aumentado de 100ms para 500ms
+      return () => clearInterval(interval);
+    }
+  }, [isTypewriterActive, shouldAutoScroll, userScrolled, isNearBottom]);
+
+  // Adicione um botão de scroll para baixo quando não estiver no final
+  const scrollToBottom = () => {
+    setShouldAutoScroll(true);
+    setUserScrolled(false);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   React.useEffect(() => {
     if (!user) {
@@ -179,7 +233,7 @@ const ChatComponent = () => {
 
   const playTTS = async (text: string, messageId: string, onEnd?: () => void) => {
     if (typeof window === 'undefined') return;
-    
+
     if (currentAudioId === messageId && isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -213,7 +267,7 @@ const ChatComponent = () => {
 
     setCurrentAudioId(messageId);
     setTtsLoadingMsgId(messageId);
-    
+
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -225,7 +279,7 @@ const ChatComponent = () => {
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
-      
+
       audio.onplay = () => {
         setIsPlaying(true);
         if (!audioProgressInterval.current) {
@@ -239,7 +293,7 @@ const ChatComponent = () => {
           }
         }, 100);
       };
-      
+
       audio.onpause = () => {
         setIsPlaying(false);
         if (audioProgressInterval.current) {
@@ -247,7 +301,7 @@ const ChatComponent = () => {
           audioProgressInterval.current = null;
         }
       };
-      
+
       audio.onended = () => {
         setIsPlaying(false);
         setCurrentAudioId(null);
@@ -259,7 +313,7 @@ const ChatComponent = () => {
         }
         if (onEnd) onEnd();
       };
-      
+
       audio.play();
     } catch (err) {
       console.error('TTS error:', err);
@@ -296,16 +350,53 @@ const ChatComponent = () => {
   const extractPlatform = (text: string): string | null => {
     const platforms = ['instagram', 'linkedin', 'facebook'];
     const lower = text.toLowerCase();
-    return platforms.find((p) => lower.includes(p)) || null;
+    // Primeiro, procura por menções diretas à plataforma
+    const directMatch = platforms.find((p) => lower.includes(p));
+    if (directMatch) return directMatch;
+
+    // Se não encontrar menção direta, procura por variações comuns
+    const variations: Record<string, string[]> = {
+      'linkedin': ['linkedin', 'linked in', 'linked-in'],
+      'instagram': ['instagram', 'insta', 'ig'],
+      'facebook': ['facebook', 'fb', 'face']
+    };
+
+    for (const [platform, vars] of Object.entries(variations)) {
+      if (vars.some(v => lower.includes(v))) return platform;
+    }
+
+    return null;
   };
 
   const extractTopic = (text: string, platform: string | null): string | null => {
     if (!text) return null;
     let topic = text;
+
+    // Remove menções à plataforma
     if (platform) {
-      topic = topic.replace(new RegExp(platform, 'i'), '').trim();
+      const variations = {
+        'linkedin': ['linkedin', 'linked in', 'linked-in'],
+        'instagram': ['instagram', 'insta', 'ig'],
+        'facebook': ['facebook', 'fb', 'face']
+      };
+      const platformVars = variations[platform as keyof typeof variations] || [platform];
+      platformVars.forEach(p => {
+        topic = topic.replace(new RegExp(p, 'i'), '').trim();
+      });
     }
-    topic = topic.replace(/^(escreva|escreve|write|crie|create|haz|fais|erstelle|schreibe|make|generate|génère|genera|criar|ajuda|help|sobre|about|para|for|pour|für)\s*/i, '').trim();
+
+    // Remove palavras comuns de comando
+    const commandWords = [
+      'escreva', 'escreve', 'write', 'crie', 'create', 'haz', 'fais', 'erstelle',
+      'schreibe', 'make', 'generate', 'génère', 'genera', 'criar', 'ajuda', 'help',
+      'sobre', 'about', 'para', 'for', 'pour', 'für', 'post', 'postar', 'publicar',
+      'publish', 'share', 'compartilhar'
+    ];
+
+    commandWords.forEach(word => {
+      topic = topic.replace(new RegExp(`^${word}\\s*`, 'i'), '').trim();
+    });
+
     if (topic.length > 2) return topic;
     return null;
   };
@@ -323,6 +414,7 @@ const ChatComponent = () => {
     setMessages((prev) => [...prev, userMsg]);
     setNewMessage('');
     setLoading(true);
+    setIsTyping(true);
 
     let platform = selectedPlatform || extractPlatform(newMessage);
     let topic = postTopic;
@@ -341,7 +433,7 @@ const ChatComponent = () => {
     if (imageDescription && platform && (!topic || topic === imageDescription) && (!newMessage.trim() || extractPlatform(newMessage))) {
       topic = imageDescription;
       setPostTopic(topic);
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -399,12 +491,13 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
 
     if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -461,6 +554,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -498,6 +592,7 @@ const ChatComponent = () => {
           ]);
         } finally {
           setLoading(false);
+          setIsTyping(false);
         }
       }
       return;
@@ -534,6 +629,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -555,7 +651,7 @@ const ChatComponent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messageId, type, content }),
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const speak = (text: string) => {
@@ -587,7 +683,7 @@ const ChatComponent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: comment }),
       });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const insertEmoji = (emoji: string) => {
@@ -622,7 +718,7 @@ const ChatComponent = () => {
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      
+
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
@@ -673,6 +769,7 @@ const ChatComponent = () => {
 
   const handleAudioSubmit = async (audioBlob: Blob) => {
     setVoiceModalMode('thinking');
+    setIsTyping(true);
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
@@ -730,15 +827,18 @@ const ChatComponent = () => {
           setVoiceModalMode('ready-to-record');
         } finally {
           setLoading(false);
+          setIsTyping(false);
         }
       } else {
         setVoiceModalOpen(false);
         setVoiceModalMode('ready-to-record');
+        setIsTyping(false);
       }
     } catch (err) {
       console.error('Transcription error:', err);
       setVoiceModalOpen(false);
       setVoiceModalMode('ready-to-record');
+      setIsTyping(false);
     }
   };
 
@@ -765,23 +865,46 @@ const ChatComponent = () => {
       setUploadedImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
+    // Limpa o valor do input para permitir selecionar o mesmo arquivo novamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageModalClose = () => {
     setImageModalOpen(false);
     setUploadedImage(null);
     setImagePreview(null);
+    setImageText('');
+    // Limpa o valor do input ao fechar o modal
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleImageConfirm = async () => {
     if (!uploadedImage) return;
+    handleFirstInteraction();
     setLoading(true);
+    setIsTyping(true);
     setImageModalOpen(false);
+
+    // Extrai plataforma e tópico do texto fornecido
+    const platform = selectedPlatform || extractPlatform(imageText);
+    const topic = postTopic || extractTopic(imageText, platform);
+
+    if (platform) {
+      setSelectedPlatform(platform);
+    }
+    if (topic) {
+      setPostTopic(topic);
+    }
+
     setMessages((prev) => [
       ...prev,
       {
         id: 'user-img-' + Date.now(),
-        content: '',
+        content: imageText,
         user: 'me',
         created_at: new Date().toISOString(),
         image: imagePreview,
@@ -794,13 +917,14 @@ const ChatComponent = () => {
       const formData = new FormData();
       formData.append('image', uploadedImage);
       formData.append('language', language);
+      formData.append('context', imageText);
       const res = await fetch('/api/analyze-image', {
         method: 'POST',
         body: formData,
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         console.error('Image analysis failed:', {
           status: res.status,
@@ -810,12 +934,12 @@ const ChatComponent = () => {
         });
         throw new Error(data.error || 'Failed to analyze image');
       }
-      
+
       if (!data.description) {
         console.error('No description in response:', data);
         throw new Error('No description received from image analysis');
       }
-      
+
       description = data.description;
       setImageDescription(description);
       console.log('Image analysis successful');
@@ -831,23 +955,46 @@ const ChatComponent = () => {
         },
       ]);
       setLoading(false);
+      setIsTyping(false);
       setUploadedImage(null);
       setImagePreview(null);
       return;
     }
 
-    if (selectedPlatform) {
-      const prompt = `Create a social media post for ${selectedPlatform} based on this image (description: ${description}). Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying. Use a vertical, block-style layout.`;
+    if (platform && topic) {
+      const prompt = `Create a social media post for ${platform} based on this image and the user's provided context.
+
+      Image Description: ${description}
+      User's Context: ${imageText}
+      Topic: ${topic}
+
+      Please create a post that:
+      1. Incorporates both the image analysis and the user's provided context
+      2. Focuses specifically on the topic: ${topic}
+      3. Follows best practices for ${platform}
+      4. Includes a clear call-to-action
+      5. Uses relevant hashtags
+      6. Maintains an appropriate tone for the platform
+      7. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the final text.
+
+      Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying.
+
+      For Tips section:
+      - Add a horizontal line separator (---)
+      - Use the title in bold
+      - Use a vertical, block-style layout
+      - Keep tips concise and actionable`;
+      
       try {
-        console.log('Generating post for platform:', selectedPlatform);
+        console.log('Generating post for platform:', platform);
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: prompt, language }),
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error('Post generation failed:', {
             status: res.status,
@@ -857,12 +1004,12 @@ const ChatComponent = () => {
           });
           throw new Error(data.error || 'Failed to generate post');
         }
-        
+
         if (!data.reply) {
           console.error('No reply in response:', data);
           throw new Error('No response received from AI');
         }
-        
+
         console.log('Post generation successful');
         setMessages((prev) => [
           ...prev,
@@ -887,21 +1034,28 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
         setUploadedImage(null);
         setImagePreview(null);
+        setImageText('');
       }
-    } else {
-      const followupPrompt = `The user uploaded an image (description: ${description}). Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+    } else if (platform) {
+      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
+
+      Image Description: ${description}
+      Selected Platform: ${platform}
+
+      Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
       try {
-        console.log('Generating platform question...');
+        console.log('Generating topic question...');
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: followupPrompt, language }),
         });
-        
+
         const data = await res.json();
-        
+
         if (!res.ok) {
           console.error('Question generation failed:', {
             status: res.status,
@@ -911,12 +1065,12 @@ const ChatComponent = () => {
           });
           throw new Error(data.error || 'Failed to generate follow-up question');
         }
-        
+
         if (!data.reply) {
           console.error('No reply in response:', data);
           throw new Error('No response received from AI');
         }
-        
+
         console.log('Question generation successful');
         setMessages((prev) => [
           ...prev,
@@ -940,8 +1094,69 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
         setUploadedImage(null);
         setImagePreview(null);
+        setImageText('');
+      }
+    } else {
+      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
+
+      Image Description: ${description}
+
+      Ask the user in a friendly, creative, and context-aware way which social media platform they would like to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      try {
+        console.log('Generating platform question...');
+        const res = await fetch('/api/chatgpt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: followupPrompt, language }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error('Question generation failed:', {
+            status: res.status,
+            statusText: res.statusText,
+            error: data.error,
+            details: data.details
+          });
+          throw new Error(data.error || 'Failed to generate follow-up question');
+        }
+
+        if (!data.reply) {
+          console.error('No reply in response:', data);
+          throw new Error('No response received from AI');
+        }
+
+        console.log('Question generation successful');
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply,
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } catch (err) {
+        console.error('AI response error:', err);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-error-' + Date.now(),
+            content: err instanceof Error ? err.message : t('common.error'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
+      } finally {
+        setLoading(false);
+        setIsTyping(false);
+        setUploadedImage(null);
+        setImagePreview(null);
+        setImageText('');
       }
     }
   };
@@ -990,21 +1205,17 @@ const ChatComponent = () => {
       const startDelay = 100;
       const msg = messages[messages.length - 1].content || '';
       setIsTypewriterActive(true);
+      
+      // Desativa o typewriter imediatamente após a resposta
       const timeout = setTimeout(() => {
         setIsTypewriterActive(false);
-      }, startDelay + msg.length * typeSpeed);
+        setShouldAutoScroll(true);
+        setUserScrolled(false);
+      }, startDelay); // Removido o cálculo baseado no tamanho da mensagem
+      
       return () => clearTimeout(timeout);
     }
   }, [messages]);
-
-  useEffect(() => {
-    if (isTypewriterActive && isNearBottom) {
-      const interval = setInterval(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [isTypewriterActive, isNearBottom]);
 
   const handleTooltipClick = async (tooltip: string) => {
     handleFirstInteraction();
@@ -1017,6 +1228,7 @@ const ChatComponent = () => {
     };
     setMessages((prev) => [...prev, userMsg]);
     setLoading(true);
+    setIsTyping(true);
 
     let platform = selectedPlatform || extractPlatform(tooltip);
     let topic = postTopic;
@@ -1031,7 +1243,7 @@ const ChatComponent = () => {
     }
 
     if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -1087,6 +1299,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1123,6 +1336,7 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
@@ -1158,15 +1372,89 @@ const ChatComponent = () => {
         ]);
       } finally {
         setLoading(false);
+        setIsTyping(false);
       }
       return;
     }
+  };
+
+  const isPostResponse = (content: string) => {
+    // Verifica se é uma resposta de post (contém hashtags e não é uma mensagem de saudação)
+    const hasHashtags = content.includes('#');
+    const isNotGreeting = !content.toLowerCase().includes('olá') && 
+                         !content.toLowerCase().includes('oi') && 
+                         !content.toLowerCase().includes('bom dia') &&
+                         !content.toLowerCase().includes('boa tarde') &&
+                         !content.toLowerCase().includes('boa noite') &&
+                         !content.toLowerCase().includes('hello') &&
+                         !content.toLowerCase().includes('hi') &&
+                         !content.toLowerCase().includes('good morning') &&
+                         !content.toLowerCase().includes('good afternoon') &&
+                         !content.toLowerCase().includes('good evening');
+
+    // Verifica se tem pelo menos 2 linhas de conteúdo
+    const hasMultipleLines = content.split('\n').length >= 2;
+
+    return hasHashtags && isNotGreeting && hasMultipleLines;
+  };
+
+  const handleCopyContent = (content: string, messageId: string) => {
+    try {
+      // Divide o conteúdo pela linha divisória
+      const [mainContent] = content.split('---');
+      
+      // Remove espaços extras e limpa o conteúdo
+      const cleanContent = mainContent.trim();
+      
+      // Remove as dicas de hashtags se existirem e limpa a formatação
+      const contentWithoutTips = cleanContent
+        .replace(/💡.*$/gm, '') // Remove dicas de hashtags
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
+        .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
+        .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
+        .replace(/^[#\s]+/gm, '') // Remove # no início das linhas
+        .replace(/\s+/g, ' ') // Remove espaços extras
+        .trim();
+      
+      // Verifica se o conteúdo está vazio após a limpeza
+      if (!contentWithoutTips) {
+        throw new Error('Conteúdo vazio após limpeza');
+      }
+
+      navigator.clipboard.writeText(contentWithoutTips)
+        .then(() => {
+          notify.success(t('chat.copied'));
+          setCopiedMessageId(messageId);
+          // Reset o estado após 2 segundos
+          setTimeout(() => {
+            setCopiedMessageId(null);
+          }, 2000);
+        })
+        .catch(err => {
+          console.error('Erro ao copiar:', err);
+          notify.error(t('common.error'));
+        });
+    } catch (err) {
+      console.error('Erro ao processar conteúdo:', err);
+      notify.error(t('common.error'));
+    }
+  };
+
+  const handleImageClick = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setImageViewerOpen(true);
+  };
+
+  const handleImageViewerClose = () => {
+    setImageViewerOpen(false);
+    setSelectedImage(null);
   };
 
   if (!user) return null;
 
   return (
     <div className="bg-auth-gradient min-h-screen flex items-center justify-center">
+      <Toaster />
       <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-white/30">
         <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-white/20">
           <h1 className="text-2xl font-bold text-white drop-shadow">{t('chat.assistantTitle') || 'Assistente IA'}</h1>
@@ -1181,7 +1469,7 @@ const ChatComponent = () => {
                 <FaCog className="text-xl text-white" />
               </button>
               {settingsOpen && (
-                <div 
+                <div
                   ref={settingsRef}
                   className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md"
                 >
@@ -1216,7 +1504,7 @@ const ChatComponent = () => {
         <main
           ref={chatContainerRef}
           onScroll={handleScroll}
-          className="flex-1 px-6 py-4 overflow-y-auto custom-scrollbar">
+          className="flex-1 px-6 py-4 overflow-y-auto custom-scrollbar relative">
           {greetingLoading ? (
             <div className="flex justify-center items-center py-8">
               <span className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></span>
@@ -1229,41 +1517,37 @@ const ChatComponent = () => {
                   key={msg.id}
                   className={`flex ${msg.user === 'me' ? 'justify-end' : 'justify-start'}`}
                 >
+                  {/* Mensagem do bot para o usuário */}
                   {msg.user === 'bot' && (
                     <div className="flex flex-col items-end mr-2 justify-center">
                       <FaRobot className="text-3xl text-white" />
                     </div>
                   )}
                   <div
-                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
+                    {/* Mensagem do usuário para o bot */}
                     <div className="flex flex-col gap-2 mb-4">
                       {msg.user === 'me' && msg.image ? (
-                        <img src={msg.image} alt="User upload" className="max-w-xs max-h-60 rounded-lg mb-2" />
-                      ) : null}
-                      {msg.user === 'bot' ? (
-                        <ReactMarkdown
-                          components={{
-                            p({node, children, ...props}: any) {
-                              return <p {...props}>{children}</p>;
-                            },
-                            strong({node, children, ...props}: any) {
-                              return <span className="font-bold text-lg mb-2" {...props}>{children}</span>;
-                            },
-                            h1({children, ...props}: any) {
-                              return <div className="font-bold text-xl mb-2">{children}</div>;
-                            },
-                            h2({children, ...props}: any) {
-                              return <div className="font-bold text-lg mb-2">{children}</div>;
-                            },
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                        <div className="flex flex-col items-center" style={{ width: '100%' }}>
+                          <div className="max-w-xs w-full">
+                            <img 
+                              src={msg.image} 
+                              alt="User upload" 
+                              className="max-w-xs max-h-60 rounded-lg mb-2 w-full cursor-pointer hover:opacity-90 transition-opacity" 
+                              onClick={() => handleImageClick(msg.image!)}
+                            />
+                            <div className="break-words w-full block" style={{ wordBreak: 'break-word' }}>
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
-                        <span>{msg.content}</span>
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
                       )}
                     </div>
+
+                    {/* Botão de feedback e reprodução de audio */}
                     <div className="flex items-center gap-2 mt-5 pb-1 relative justify-between">
                       <div className="flex items-center gap-2">
                         {msg.user === 'bot' && (
@@ -1310,7 +1594,7 @@ const ChatComponent = () => {
                                   {/* Barra de reprodução de audio */}
                                   {currentAudioId === msg.id && (
                                     <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-white/20">
-                                      <div 
+                                        <div
                                         className="absolute bottom-0 z-10 h-full bg-blue-400 mt-1 transition-all duration-100"
                                         style={{ width: `${audioProgress}%` }}
                                       />
@@ -1320,6 +1604,22 @@ const ChatComponent = () => {
                               )}
                             </button>
                             <button className="hover:text-blue-300 transition-colors" onClick={() => setCommentModal({ open: true, message: { id: msg.id, content: msg.content } })}><FaRegCommentDots className="text-lg text-white" /></button>
+                            {isPostResponse(msg.content) && (
+                              <button
+                                className="hover:text-blue-300 transition-colors relative group"
+                                onClick={() => handleCopyContent(msg.content, msg.id)}
+                                title={t('chat.copy') || 'Copiar'}
+                              >
+                                {copiedMessageId === msg.id ? (
+                                  <div className="flex flex-col items-center">
+                                    <FaCheck className="text-lg text-green-400" />
+                                    <span className="text-xs text-green-400 mt-1">{t('chat.copied') || 'Copiado!'}</span>
+                                  </div>
+                                ) : (
+                                  <FaCopy className="text-lg text-white" />
+                                )}
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -1333,6 +1633,27 @@ const ChatComponent = () => {
                   )}
                 </div>
               ))}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="flex flex-col items-end mr-2 justify-center">
+                    <FaRobot className="text-3xl text-white" />
+                  </div>
+                  <div className="rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group mr-2">
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
+              {!isNearBottom && showScrollButton && !imageViewerOpen && (
+                <button
+                  onClick={scrollToBottom}
+                  className="fixed bottom-24 right-2 md:right-auto md:left-1/2 md:transform md:-translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg transition-all duration-200 z-50"
+                  aria-label="Scroll to bottom"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
+                  </svg>
+                </button>
+              )}
               <div ref={messagesEndRef} />
             </div>
           )}
@@ -1363,7 +1684,7 @@ const ChatComponent = () => {
               <div className="flex flex-col sm:flex-row gap-2 w-full justify-center">
                 {tooltips.slice(2, 4).map((tip, idx) => (
                   <button
-                    key={idx+2}
+                    key={idx + 2}
                     className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
                     onClick={() => handleTooltipClick(tip)}
                   >
@@ -1464,7 +1785,7 @@ const ChatComponent = () => {
               </button>
             </div>
             {showEmojiPicker && (
-              <div 
+              <div
                 ref={emojiPickerRef}
                 className="absolute bottom-12 left-0 z-50"
               >
@@ -1490,6 +1811,8 @@ const ChatComponent = () => {
           }
         }}
       />
+
+      {/* Modal de UploadImage  */}
       <Modal
         isOpen={imageModalOpen}
         onRequestClose={handleImageModalClose}
@@ -1506,7 +1829,7 @@ const ChatComponent = () => {
           </div>
         )}
       >
-        <div 
+        <div
           className="bg-auth-gradient rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-white/30 shadow-2xl transform transition-all duration-200 ease-in-out"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1523,11 +1846,10 @@ const ChatComponent = () => {
             </button>
           </div>
           <div
-            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${
-              imagePreview 
-                ? 'border-white/30 bg-white/5' 
-                : 'border-white/30 bg-white/5 hover:bg-white/10'
-            }`}
+            className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${imagePreview
+              ? 'border-white/30 bg-white/5'
+              : 'border-white/30 bg-white/5 hover:bg-white/10'
+              }`}
             onDrop={handleImageDrop}
             onDragOver={e => e.preventDefault()}
             onClick={(e) => {
@@ -1537,10 +1859,10 @@ const ChatComponent = () => {
           >
             {imagePreview ? (
               <div className="relative w-full h-full flex items-center justify-center">
-                <img 
-                  src={imagePreview} 
-                  alt="Preview" 
-                  className="max-h-44 max-w-full object-contain rounded-lg" 
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-h-44 max-w-full object-contain rounded-lg"
                 />
                 <button
                   onClick={(e) => {
@@ -1566,6 +1888,24 @@ const ChatComponent = () => {
                 <span className="text-center px-4">{t('chat.dragAndDropImage') || 'Arraste e solte ou clique para selecionar uma imagem'}</span>
               </div>
             )}
+          </div>
+          <div className="w-full">
+            <div className="flex items-center w-full bg-transparent rounded-2xl px-4 py-2 shadow-md border border-white/30">
+              <input
+                type="text"
+                placeholder={t('chat.typeMessage') || 'Digite uma mensagem para a imagem...'}
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
+                value={imageText}
+                onChange={(e) => setImageText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && uploadedImage) {
+                    e.preventDefault();
+                    handleImageConfirm();
+                  }
+                }}
+                style={{ background: 'transparent' }}
+              />
+            </div>
           </div>
           <div className="flex gap-3 mt-4 w-full">
             <button
@@ -1599,6 +1939,54 @@ const ChatComponent = () => {
         modalRef={voiceModalRef}
         error={voiceError}
       />
+
+      {/* Modal de Visualização de Imagem */}
+      <Modal
+        isOpen={imageViewerOpen}
+        onRequestClose={handleImageViewerClose}
+        className="fixed inset-0 flex items-center justify-center z-50"
+        overlayClassName="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer"
+        ariaHideApp={false}
+        shouldCloseOnOverlayClick={true}
+        shouldCloseOnEsc={true}
+        closeTimeoutMS={0}
+        onOverlayClick={handleImageViewerClose}
+      >
+        <div 
+          className="relative bg-auth-gradient rounded-2xl p-4 max-w-2xl w-[90vw] border border-white/30 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.imagePreview') || 'Visualização da Imagem'}</h2>
+            <button
+              onClick={handleImageViewerClose}
+              className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+              aria-label={t('common.close') || 'Fechar'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          {selectedImage && (
+            <div className="relative w-full aspect-square md:aspect-auto md:h-[60vh] bg-black/20 rounded-xl overflow-hidden">
+              <img
+                src={selectedImage}
+                alt="Full size"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          )}
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleImageViewerClose}
+              className="px-4 py-2 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors"
+            >
+              {t('common.close') || 'Fechar'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
