@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay, FaCopy, FaCheck } from 'react-icons/fa';
 import { useSupabase } from '../providers/SupabaseProvider';
@@ -15,6 +15,7 @@ import data from '@emoji-mart/data';
 import ReactModal from 'react-modal';
 import { Toaster } from 'react-hot-toast';
 import { useNotification } from '../../lib/hooks/useNotification';
+import { copyMessageContent, isPostResponse } from '../../lib/utils/messageUtils';
 
 
 const Modal: any = ReactModal;
@@ -55,7 +56,7 @@ const ChatComponent = () => {
   const [feedback, setFeedback] = useState<Record<string, 'like' | 'dislike' | undefined>>({});
   const [commentModal, setCommentModal] = useState<{ open: boolean, message?: { id: string, content: string } }>({ open: false });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [voiceMode, setVoiceMode] = useState<'idle' | 'recording' | 'ai-speaking'>('idle');
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -401,6 +402,71 @@ const ChatComponent = () => {
     return null;
   };
 
+  const generatePostPrompt = (platform: string, topic: string, imageDescription?: string, imageText?: string) => {
+    const conversationInstructions = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), add them at the end of the post as a final section called 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+
+    const postFormatInstructions = `Create a social media post for ${platform} about "${topic}".
+
+    ${imageDescription ? `Image Description: ${imageDescription}
+    User's Context: ${imageText || ''}` : ''}
+
+    Please create a post that:
+    1. ${imageDescription ? 'Incorporates both the image analysis and the user\'s provided context' : 'Focuses on the main topic'}
+    2. Follows best practices for ${platform}
+    3. Includes a clear call-to-action
+    4. Uses relevant hashtags
+    5. Maintains an appropriate tone for the platform
+    6. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the final text
+
+    CRITICAL FORMATTING RULES (MUST BE FOLLOWED IN ALL LANGUAGES):
+    1. Start with a brief comment about the post idea (1-2 sentences)
+    2. Add a horizontal line (exactly three dashes: ---)
+    3. Write the post content
+    4. Add another horizontal line (exactly three dashes: ---)
+    5. Add the tips section
+    6. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the text
+
+
+    The horizontal lines (---) are MANDATORY and must be placed exactly as shown below:
+
+    [Your brief comment about the post]
+
+    ---
+    [Your post content here]
+    ---
+    
+    • [Your tips here]
+
+    IMPORTANT: 
+    - The horizontal lines (---) are REQUIRED and must be placed exactly as shown above, regardless of the language used. The post content MUST be between these two horizontal lines.
+    - Include the tips section in the same message as the post. The tips section should:
+    - Be titled [TIPS] section in italics. Important: the title must be in language of the user.
+    - Use a vertical, block-style layout
+    - Keep tips concise and actionable
+    - Be part of the same message as the post, not a separate message
+
+    REMEMBER: Your response MUST follow this exact format in ALL languages. The horizontal lines (---) are MANDATORY and must be placed exactly as shown.`;
+
+    return `${conversationInstructions}\n\n${postFormatInstructions}`;
+  };
+
+  const generateFollowupPrompt = (type: 'platform' | 'topic', platform?: string, topic?: string, imageText?: string, imageDescription?: string) => {
+    if (type === 'platform') {
+      return `The user wants to create a post about "${topic}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+    } else {
+      if (imageText && imageDescription) {
+        return `The user uploaded an image with the following context: "${imageText}"
+
+        Image Description: ${imageDescription}
+        Selected Platform: ${platform}
+
+        Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
+      } else {
+        return `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      }
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     handleFirstInteraction();
@@ -433,7 +499,7 @@ const ChatComponent = () => {
     if (imageDescription && platform && (!topic || topic === imageDescription) && (!newMessage.trim() || extractPlatform(newMessage))) {
       topic = imageDescription;
       setPostTopic(topic);
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = generatePostPrompt(platform, topic, imageDescription, newMessage);
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -450,34 +516,15 @@ const ChatComponent = () => {
           body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
-        if (data.reply && data.reply.includes('Tips:')) {
-          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: mainPost.trim(),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: 'bot-' + (Date.now() + 1),
-              content: 'Tips:' + tipsParts.join('Tips:').trim(),
-              user: 'bot',
-              created_at: new Date(Date.now() + 1).toISOString(),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: data.reply || t('chat.fallback'),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
         setImageDescription(null);
       } catch (err) {
         setMessages((prev) => [
@@ -497,7 +544,7 @@ const ChatComponent = () => {
     }
 
     if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = generatePostPrompt(platform, topic);
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -513,34 +560,15 @@ const ChatComponent = () => {
           body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
-        if (data.reply && data.reply.includes('Tips:')) {
-          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: mainPost.trim(),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: 'bot-' + (Date.now() + 1),
-              content: 'Tips:' + tipsParts.join('Tips:').trim(),
-              user: 'bot',
-              created_at: new Date(Date.now() + 1).toISOString(),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: data.reply || t('chat.fallback'),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
         setImageDescription(null);
       } catch (err) {
         setMessages((prev) => [
@@ -563,7 +591,7 @@ const ChatComponent = () => {
       setSelectedPlatform(platform);
       setPostTopic(null);
       if (!extractedTopic) {
-        const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+        const followupPrompt = generateFollowupPrompt('topic', platform);
         try {
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
@@ -600,7 +628,7 @@ const ChatComponent = () => {
 
     if (!platform && newMessage.trim()) {
       setPostTopic(newMessage);
-      const followupPrompt = `The user wants to create a post about "${newMessage}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      const followupPrompt = generateFollowupPrompt('platform', undefined, newMessage);
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
@@ -847,6 +875,7 @@ const ChatComponent = () => {
   };
 
   const handleImageButtonClick = () => {
+    setImageText(newMessage);
     setImageModalOpen(true);
   };
 
@@ -872,6 +901,7 @@ const ChatComponent = () => {
   };
 
   const handleImageModalClose = () => {
+    setNewMessage(imageText);
     setImageModalOpen(false);
     setUploadedImage(null);
     setImagePreview(null);
@@ -962,29 +992,7 @@ const ChatComponent = () => {
     }
 
     if (platform && topic) {
-      const prompt = `Create a social media post for ${platform} based on this image and the user's provided context.
-
-      Image Description: ${description}
-      User's Context: ${imageText}
-      Topic: ${topic}
-
-      Please create a post that:
-      1. Incorporates both the image analysis and the user's provided context
-      2. Focuses specifically on the topic: ${topic}
-      3. Follows best practices for ${platform}
-      4. Includes a clear call-to-action
-      5. Uses relevant hashtags
-      6. Maintains an appropriate tone for the platform
-      7. Do not include any instruction labels like "Call-to-Action:", "Tips:" or "Hashtags:" in the final text.
-
-      Format the post with a clear title at the top (bold if possible), followed by the main content, call-to-action, and hashtags, each on their own line for easy reading and copying.
-
-      For Tips section:
-      - Add a horizontal line separator (---)
-      - Use the title in bold
-      - Use a vertical, block-style layout
-      - Keep tips concise and actionable`;
-      
+      const prompt = generatePostPrompt(platform, topic, description, imageText);
       try {
         console.log('Generating post for platform:', platform);
         const res = await fetch('/api/chatgpt', {
@@ -1040,12 +1048,7 @@ const ChatComponent = () => {
         setImageText('');
       }
     } else if (platform) {
-      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
-
-      Image Description: ${description}
-      Selected Platform: ${platform}
-
-      Ask the user in a friendly, creative, and context-aware way what specific topic or content they want to post about on ${platform}. Respond only with your question.`;
+      const followupPrompt = generateFollowupPrompt('topic', platform, undefined, imageText, description);
       try {
         console.log('Generating topic question...');
         const res = await fetch('/api/chatgpt', {
@@ -1100,11 +1103,7 @@ const ChatComponent = () => {
         setImageText('');
       }
     } else {
-      const followupPrompt = `The user uploaded an image with the following context: "${imageText}"
-
-      Image Description: ${description}
-
-      Ask the user in a friendly, creative, and context-aware way which social media platform they would like to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      const followupPrompt = generateFollowupPrompt('platform', undefined, undefined, imageText, description);
       try {
         console.log('Generating platform question...');
         const res = await fetch('/api/chatgpt', {
@@ -1205,14 +1204,14 @@ const ChatComponent = () => {
       const startDelay = 100;
       const msg = messages[messages.length - 1].content || '';
       setIsTypewriterActive(true);
-      
+
       // Desativa o typewriter imediatamente após a resposta
       const timeout = setTimeout(() => {
         setIsTypewriterActive(false);
         setShouldAutoScroll(true);
         setUserScrolled(false);
       }, startDelay); // Removido o cálculo baseado no tamanho da mensagem
-      
+
       return () => clearTimeout(timeout);
     }
   }, [messages]);
@@ -1243,7 +1242,7 @@ const ChatComponent = () => {
     }
 
     if (platform && topic) {
-      const prompt = `You are a friendly, expert social media content assistant. Your main focus is to help the user specify the social media platform (Instagram, LinkedIn, or Facebook) and the content/topic for their post. Guide the user to provide both, but do so naturally and contextually in the flow of conversation. If the user is asking a question, discussing strategy, or just chatting, answer helpfully and conversationally. You can process and analyze images uploaded by users to create more engaging posts. When users ask about image uploads, inform them that you can receive and analyze their images to enhance their posts. Only generate a complete, ready-to-use post for ${platform} about "${topic}" if the user clearly requests it or if the context makes it appropriate and both platform and topic are clear. When generating a post, use best practices for formatting, tone, hashtags, and calls-to-action. If you have extra recommendations (such as best time to post, engagement tips, or suggestions), send them as a second, separate message starting with 'Tips:'. Do not greet the user except at the very start of a new chat. Otherwise, keep the conversation natural and helpful.`;
+      const prompt = generatePostPrompt(platform, topic);
       const openaiMessages = [
         { role: 'system', content: prompt },
         ...messages.map((msg) => ({
@@ -1259,34 +1258,15 @@ const ChatComponent = () => {
           body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
-        if (data.reply && data.reply.includes('Tips:')) {
-          const [mainPost, ...tipsParts] = data.reply.split('Tips:');
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: mainPost.trim(),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-            {
-              id: 'bot-' + (Date.now() + 1),
-              content: 'Tips:' + tipsParts.join('Tips:').trim(),
-              user: 'bot',
-              created_at: new Date(Date.now() + 1).toISOString(),
-            },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: 'bot-' + Date.now(),
-              content: data.reply || t('chat.fallback'),
-              user: 'bot',
-              created_at: new Date().toISOString(),
-            },
-          ]);
-        }
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: 'bot-' + Date.now(),
+            content: data.reply || t('chat.fallback'),
+            user: 'bot',
+            created_at: new Date().toISOString(),
+          },
+        ]);
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -1307,7 +1287,7 @@ const ChatComponent = () => {
     if (platform && !topic) {
       setSelectedPlatform(platform);
       setPostTopic(null);
-      const followupPrompt = `The user wants to create a post for ${platform}. Ask them in a friendly, creative, and context-aware way what topic or content they want to post about. Respond only with your question.`;
+      const followupPrompt = generateFollowupPrompt('topic', platform);
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
@@ -1343,7 +1323,7 @@ const ChatComponent = () => {
 
     if (!platform && tooltip.trim()) {
       setPostTopic(tooltip);
-      const followupPrompt = `The user wants to create a post about "${tooltip}". Ask them in a friendly, creative, and context-aware way which social media platform they want to use (Instagram, LinkedIn, or Facebook). Respond only with your question.`;
+      const followupPrompt = generateFollowupPrompt('platform', undefined, tooltip);
       try {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
@@ -1378,50 +1358,15 @@ const ChatComponent = () => {
     }
   };
 
-  const isPostResponse = (content: string) => {
-    // Verifica se é uma resposta de post (contém hashtags e não é uma mensagem de saudação)
-    const hasHashtags = content.includes('#');
-    const isNotGreeting = !content.toLowerCase().includes('olá') && 
-                         !content.toLowerCase().includes('oi') && 
-                         !content.toLowerCase().includes('bom dia') &&
-                         !content.toLowerCase().includes('boa tarde') &&
-                         !content.toLowerCase().includes('boa noite') &&
-                         !content.toLowerCase().includes('hello') &&
-                         !content.toLowerCase().includes('hi') &&
-                         !content.toLowerCase().includes('good morning') &&
-                         !content.toLowerCase().includes('good afternoon') &&
-                         !content.toLowerCase().includes('good evening');
-
-    // Verifica se tem pelo menos 2 linhas de conteúdo
-    const hasMultipleLines = content.split('\n').length >= 2;
-
-    return hasHashtags && isNotGreeting && hasMultipleLines;
-  };
-
   const handleCopyContent = (content: string, messageId: string) => {
     try {
-      // Divide o conteúdo pela linha divisória
-      const [mainContent] = content.split('---');
-      
-      // Remove espaços extras e limpa o conteúdo
-      const cleanContent = mainContent.trim();
-      
-      // Remove as dicas de hashtags se existirem e limpa a formatação
-      const contentWithoutTips = cleanContent
-        .replace(/💡.*$/gm, '') // Remove dicas de hashtags
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove asteriscos de negrito
-        .replace(/__(.*?)__/g, '$1') // Remove underscores de negrito
-        .replace(/\n{3,}/g, '\n\n') // Remove múltiplas quebras de linha
-        .replace(/^[#\s]+/gm, '') // Remove # no início das linhas
-        .replace(/\s+/g, ' ') // Remove espaços extras
-        .trim();
-      
-      // Verifica se o conteúdo está vazio após a limpeza
-      if (!contentWithoutTips) {
-        throw new Error('Conteúdo vazio após limpeza');
+      const cleanedContent = copyMessageContent(content);
+
+      if (!cleanedContent) {
+        throw new Error('Conteúdo inválido para cópia');
       }
 
-      navigator.clipboard.writeText(contentWithoutTips)
+      navigator.clipboard.writeText(cleanedContent)
         .then(() => {
           notify.success(t('chat.copied'));
           setCopiedMessageId(messageId);
@@ -1531,12 +1476,15 @@ const ChatComponent = () => {
                       {msg.user === 'me' && msg.image ? (
                         <div className="flex flex-col items-center" style={{ width: '100%' }}>
                           <div className="max-w-xs w-full">
-                            <img 
-                              src={msg.image} 
-                              alt="User upload" 
-                              className="max-w-xs max-h-60 rounded-lg mb-2 w-full cursor-pointer hover:opacity-90 transition-opacity" 
-                              onClick={() => handleImageClick(msg.image!)}
-                            />
+                            <div className="relative w-full aspect-square rounded-lg overflow-hidden mb-2">
+                              <img
+                                src={msg.image}
+                                alt="User upload"
+                                className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => handleImageClick(msg.image!)}
+                                style={{ maxHeight: '300px' }}
+                              />
+                            </div>
                             <div className="break-words w-full block" style={{ wordBreak: 'break-word' }}>
                               <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
@@ -1594,7 +1542,7 @@ const ChatComponent = () => {
                                   {/* Barra de reprodução de audio */}
                                   {currentAudioId === msg.id && (
                                     <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-white/20">
-                                        <div
+                                      <div
                                         className="absolute bottom-0 z-10 h-full bg-blue-400 mt-1 transition-all duration-100"
                                         style={{ width: `${audioProgress}%` }}
                                       />
@@ -1613,7 +1561,7 @@ const ChatComponent = () => {
                                 {copiedMessageId === msg.id ? (
                                   <div className="flex flex-col items-center">
                                     <FaCheck className="text-lg text-green-400" />
-                                    <span className="text-xs text-green-400 mt-1">{t('chat.copied') || 'Copiado!'}</span>
+                                    <span className="text-xs text-green-400 mt-1">{t('chat.copied')}</span>
                                   </div>
                                 ) : (
                                   <FaCopy className="text-lg text-white" />
@@ -1736,15 +1684,23 @@ const ChatComponent = () => {
               >
                 <FaRegSmile />
               </button>
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 placeholder={t('chat.typeMessage')}
-                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300 resize-none"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (newMessage.trim() && !loading) {
+                      handleSendMessage(e);
+                    }
+                  }
+                }}
                 disabled={loading}
-                style={{ background: 'transparent' }}
+                style={{ background: 'transparent', minHeight: '40px', maxHeight: '120px' }}
+                rows={1}
               />
               <button
                 type="submit"
@@ -1955,7 +1911,7 @@ const ChatComponent = () => {
         closeTimeoutMS={0}
         onOverlayClick={handleImageViewerClose}
       >
-        <div 
+        <div
           className="relative bg-auth-gradient rounded-2xl p-4 max-w-2xl w-[90vw] border border-white/30 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
