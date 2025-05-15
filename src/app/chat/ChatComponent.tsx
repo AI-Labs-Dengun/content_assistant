@@ -875,6 +875,7 @@ const ChatComponent = () => {
   };
 
   const handleImageButtonClick = () => {
+    setImageText(newMessage);
     setImageModalOpen(true);
   };
 
@@ -900,6 +901,7 @@ const ChatComponent = () => {
   };
 
   const handleImageModalClose = () => {
+    setNewMessage(imageText);
     setImageModalOpen(false);
     setUploadedImage(null);
     setImagePreview(null);
