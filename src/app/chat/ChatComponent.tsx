@@ -16,6 +16,7 @@ import ReactModal from 'react-modal';
 import { Toaster } from 'react-hot-toast';
 import { useNotification } from '../../lib/hooks/useNotification';
 import { copyMessageContent, isPostResponse } from '../../lib/utils/messageUtils';
+import { getBrowserLanguage } from '@/lib/i18n';
 
 
 const Modal: any = ReactModal;
@@ -96,6 +97,7 @@ const ChatComponent = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(getBrowserLanguage());
 
 
   const handleScroll = () => {
@@ -469,7 +471,6 @@ const ChatComponent = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleFirstInteraction();
     if (!newMessage.trim() || !user) return;
     const userMsg: Message = {
       id: 'user-' + Date.now(),
@@ -513,7 +514,10 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
+          body: JSON.stringify({ 
+            messages: openaiMessages, 
+            language: currentLanguage 
+          }),
         });
         const data = await res.json();
         setMessages((prev) => [
@@ -1394,6 +1398,11 @@ const ChatComponent = () => {
     setImageViewerOpen(false);
     setSelectedImage(null);
   };
+
+  useEffect(() => {
+    // Atualiza o idioma quando o componente é montado
+    setCurrentLanguage(getBrowserLanguage());
+  }, []);
 
   if (!user) return null;
 
