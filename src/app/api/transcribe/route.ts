@@ -9,6 +9,8 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const file = formData.get('audio');
+    const language = formData.get('language') as string || 'en';
+    
     if (!file || !(file instanceof Blob)) {
       return NextResponse.json({ error: 'Audio file is required' }, { status: 400 });
     }
@@ -21,7 +23,7 @@ export async function POST(req: Request) {
       file: audioFile,
       model: 'whisper-1',
       response_format: 'json',
-      language: 'pt',
+      language: language,
     });
 
     return NextResponse.json({ text: transcription.text });
