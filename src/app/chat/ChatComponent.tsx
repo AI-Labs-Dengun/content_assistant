@@ -805,7 +805,7 @@ const ChatComponent = () => {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
-      formData.append('language', language);
+      formData.append('language', currentLanguage);
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
@@ -824,14 +824,20 @@ const ChatComponent = () => {
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: data.text, language }),
+            body: JSON.stringify({ 
+              message: data.text, 
+              language: currentLanguage,
+              messages: [
+                { role: 'user', content: data.text }
+              ]
+            }),
           });
           const aiData = await res.json();
           setMessages((prev) => [
             ...prev,
             {
               id: 'bot-' + Date.now(),
-              content: aiData.reply || 'Desculpe, não consegui responder agora.',
+              content: aiData.reply || t('chat.fallback'),
               user: 'bot',
               created_at: new Date().toISOString(),
             },
@@ -850,7 +856,7 @@ const ChatComponent = () => {
             ...prev,
             {
               id: 'bot-error-' + Date.now(),
-              content: 'Erro ao conectar ao ChatGPT.',
+              content: t('common.error'),
               user: 'bot',
               created_at: new Date().toISOString(),
             },
