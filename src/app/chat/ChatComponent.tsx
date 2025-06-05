@@ -16,6 +16,7 @@ import ReactModal from 'react-modal';
 import { Toaster } from 'react-hot-toast';
 import { useNotification } from '../../lib/hooks/useNotification';
 import { copyMessageContent, isPostResponse } from '../../lib/utils/messageUtils';
+import { getBrowserLanguage } from '@/lib/i18n';
 
 
 const Modal: any = ReactModal;
@@ -96,6 +97,7 @@ const ChatComponent = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(getBrowserLanguage());
 
 
   const handleScroll = () => {
@@ -469,7 +471,6 @@ const ChatComponent = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleFirstInteraction();
     if (!newMessage.trim() || !user) return;
     const userMsg: Message = {
       id: 'user-' + Date.now(),
@@ -513,7 +514,10 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
+          body: JSON.stringify({ 
+            messages: openaiMessages, 
+            language: currentLanguage 
+          }),
         });
         const data = await res.json();
         setMessages((prev) => [
@@ -801,7 +805,7 @@ const ChatComponent = () => {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.wav');
-      formData.append('language', language);
+      formData.append('language', currentLanguage);
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
@@ -820,14 +824,20 @@ const ChatComponent = () => {
           const res = await fetch('/api/chatgpt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: data.text, language }),
+            body: JSON.stringify({ 
+              message: data.text, 
+              language: currentLanguage,
+              messages: [
+                { role: 'user', content: data.text }
+              ]
+            }),
           });
           const aiData = await res.json();
           setMessages((prev) => [
             ...prev,
             {
               id: 'bot-' + Date.now(),
-              content: aiData.reply || 'Desculpe, não consegui responder agora.',
+              content: aiData.reply || t('chat.fallback'),
               user: 'bot',
               created_at: new Date().toISOString(),
             },
@@ -846,7 +856,7 @@ const ChatComponent = () => {
             ...prev,
             {
               id: 'bot-error-' + Date.now(),
-              content: 'Erro ao conectar ao ChatGPT.',
+              content: t('common.error'),
               user: 'bot',
               created_at: new Date().toISOString(),
             },
@@ -1394,6 +1404,11 @@ const ChatComponent = () => {
     setImageViewerOpen(false);
     setSelectedImage(null);
   };
+
+  useEffect(() => {
+    // Atualiza o idioma quando o componente é montado
+    setCurrentLanguage(getBrowserLanguage());
+  }, []);
 
   if (!user) return null;
 

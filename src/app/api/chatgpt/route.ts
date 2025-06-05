@@ -13,8 +13,25 @@ export async function POST(req: Request) {
     const messages = body.messages;
     const message = body.message;
     let language = body.language || 'en';
+    
+    // Detect language from the message if not provided
+    if (!body.language && message) {
+      const languageDetectionPrompt = `Detect the language of this message and respond with only the language code (en, es, pt, fr, de): "${message}"`;
+      const detectionResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: languageDetectionPrompt }],
+        temperature: 0.3,
+        max_tokens: 10
+      });
+      
+      const detectedLanguage = detectionResponse.choices[0].message.content?.trim().toLowerCase();
+      if (detectedLanguage && ['en', 'es', 'pt', 'fr', 'de'].includes(detectedLanguage)) {
+        language = detectedLanguage;
+      }
+    }
+
     // Debug log
-    console.log('API /chatgpt received language:', language);
+    console.log('API /chatgpt detected language:', language);
 
     // Read instructions and knowledge from public directory
     const instructions = await fs.readFile(path.join(process.cwd(), 'public', 'AI_INSTRUCTIONS.md'), 'utf-8');
