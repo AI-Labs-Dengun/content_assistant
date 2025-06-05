@@ -44,7 +44,7 @@ const languageNames: Record<string, string> = {
 const ChatComponent = () => {
   const { user, signOut } = useSupabase();
   const { dark, toggleTheme } = useTheme();
-  const { language } = useLanguage();
+  const { language, setLanguage } = useLanguage();
   const { t } = useTranslation(language as Language);
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -471,81 +471,25 @@ const ChatComponent = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+    if (!newMessage.trim() || loading) return;
+
+    handleFirstInteraction();
+    setLoading(true);
+    setIsTyping(true);
+
     const userMsg: Message = {
       id: 'user-' + Date.now(),
       content: newMessage,
       user: 'me',
       created_at: new Date().toISOString(),
     };
+
     setMessages((prev) => [...prev, userMsg]);
     setNewMessage('');
-    setLoading(true);
-    setIsTyping(true);
 
-    let platform = selectedPlatform || extractPlatform(newMessage);
-    let topic = postTopic;
-    if (!platform) {
-      setSelectedPlatform(null);
-    } else {
-      setSelectedPlatform(platform);
-    }
-
+    const platform = selectedPlatform || extractPlatform(newMessage);
+    const topic = postTopic || extractTopic(newMessage, platform);
     const extractedTopic = extractTopic(newMessage, platform);
-    if (platform && extractedTopic) {
-      topic = extractedTopic;
-      setPostTopic(topic);
-    }
-
-    if (imageDescription && platform && (!topic || topic === imageDescription) && (!newMessage.trim() || extractPlatform(newMessage))) {
-      topic = imageDescription;
-      setPostTopic(topic);
-      const prompt = generatePostPrompt(platform, topic, imageDescription, newMessage);
-      const openaiMessages = [
-        { role: 'system', content: prompt },
-        ...messages.map((msg) => ({
-          role: msg.user === 'me' ? 'user' : 'assistant',
-          content: msg.content
-        })),
-        { role: 'user', content: `The user uploaded an image. Here is the description: "${imageDescription}". Use this as the topic/content for the post.` },
-        { role: 'user', content: newMessage }
-      ];
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            messages: openaiMessages, 
-            language: currentLanguage 
-          }),
-        });
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-        setImageDescription(null);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-        setIsTyping(false);
-      }
-      return;
-    }
 
     if (platform && topic) {
       const prompt = generatePostPrompt(platform, topic);
@@ -561,9 +505,15 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
+          body: JSON.stringify({ messages: openaiMessages }),
         });
         const data = await res.json();
+        
+        // Atualiza o idioma atual se um novo idioma foi detectado
+        if (data.detectedLanguage && data.detectedLanguage !== language) {
+          setLanguage(data.detectedLanguage);
+        }
+        
         setMessages((prev) => [
           ...prev,
           {
@@ -800,17 +750,18 @@ const ChatComponent = () => {
   };
 
   const handleAudioSubmit = async (audioBlob: Blob) => {
-    setVoiceModalMode('thinking');
-    setIsTyping(true);
     try {
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'audio.wav');
-      formData.append('language', currentLanguage);
+      formData.append('audio', audioBlob);
+      formData.append('language', language);
+
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         body: formData,
       });
+
       const data = await res.json();
+
       if (data.text) {
         const userMsg = {
           id: 'user-' + Date.now(),
@@ -825,14 +776,19 @@ const ChatComponent = () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-              message: data.text, 
-              language: currentLanguage,
+              message: data.text,
               messages: [
                 { role: 'user', content: data.text }
               ]
             }),
           });
           const aiData = await res.json();
+          
+          // Atualiza o idioma atual se um novo idioma foi detectado
+          if (aiData.detectedLanguage && aiData.detectedLanguage !== language) {
+            setLanguage(aiData.detectedLanguage);
+          }
+          
           setMessages((prev) => [
             ...prev,
             {
@@ -1265,46 +1221,15 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages, language }),
+          body: JSON.stringify({ messages: openaiMessages }),
         });
         const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-' + Date.now(),
-            content: data.reply || t('chat.fallback'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } catch (err) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: 'bot-error-' + Date.now(),
-            content: t('common.error'),
-            user: 'bot',
-            created_at: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setLoading(false);
-        setIsTyping(false);
-      }
-      return;
-    }
-
-    if (platform && !topic) {
-      setSelectedPlatform(platform);
-      setPostTopic(null);
-      const followupPrompt = generateFollowupPrompt('topic', platform);
-      try {
-        const res = await fetch('/api/chatgpt', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
-        });
-        const data = await res.json();
+        
+        // Atualiza o idioma atual se um novo idioma foi detectado
+        if (data.detectedLanguage && data.detectedLanguage !== language) {
+          setLanguage(data.detectedLanguage);
+        }
+        
         setMessages((prev) => [
           ...prev,
           {
@@ -1338,9 +1263,15 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt, language }),
+          body: JSON.stringify({ message: followupPrompt }),
         });
         const data = await res.json();
+        
+        // Atualiza o idioma atual se um novo idioma foi detectado
+        if (data.detectedLanguage && data.detectedLanguage !== language) {
+          setLanguage(data.detectedLanguage);
+        }
+        
         setMessages((prev) => [
           ...prev,
           {
