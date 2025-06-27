@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useRef, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaCog, FaSignOutAlt, FaPause, FaPlay, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaRobot, FaUserCircle, FaRegThumbsUp, FaRegThumbsDown, FaRegCommentDots, FaVolumeUp, FaPaperPlane, FaRegSmile, FaMicrophone, FaPause, FaPlay, FaCopy, FaCheck, FaWhatsapp } from 'react-icons/fa';
+import { IoLogOutOutline } from 'react-icons/io5';
 import { useSupabase } from '../providers/SupabaseProvider';
 import { useTheme } from '../providers/ThemeProvider';
 import { useLanguage } from '../../lib/LanguageContext';
@@ -51,9 +52,6 @@ const ChatComponent = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
-  const settingsButtonRef = useRef<HTMLButtonElement>(null);
   const [feedback, setFeedback] = useState<Record<string, 'like' | 'dislike' | undefined>>({});
   const [commentModal, setCommentModal] = useState<{ open: boolean, message?: { id: string, content: string } }>({ open: false });
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1129,25 +1127,6 @@ const ChatComponent = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        settingsOpen &&
-        settingsRef.current &&
-        !settingsRef.current.contains(event.target as Node) &&
-        settingsButtonRef.current &&
-        !settingsButtonRef.current.contains(event.target as Node)
-      ) {
-        setSettingsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [settingsOpen]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
         showEmojiPicker &&
         emojiPickerRef.current &&
         !emojiPickerRef.current.contains(event.target as Node) &&
@@ -1346,51 +1325,42 @@ const ChatComponent = () => {
   return (
     <div className="bg-auth-gradient min-h-screen flex items-center justify-center">
       <Toaster />
-      <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-white/30">
-        <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-white/20">
-          <h1 className="text-2xl font-bold text-white drop-shadow">{t('chat.assistantTitle') || 'Assistente IA'}</h1>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <button
-                ref={settingsButtonRef}
-                onClick={() => setSettingsOpen((v) => !v)}
-                className="p-2 rounded-full bg-white/30 hover:bg-white/50 text-gray-800 dark:text-white focus:outline-none"
-                aria-label={t('settings.title')}
-              >
-                <FaCog className="text-xl text-white" />
-              </button>
-              {settingsOpen && (
-                <div
-                  ref={settingsRef}
-                  className="absolute right-0 mt-2 w-48 bg-auth-gradient bg-opacity-90 rounded-xl shadow-lg border border-white z-50 backdrop-blur-md"
-                >
-                  <button
-                    onClick={toggleTheme}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 rounded-t-xl"
-                  >
-                    {dark ? (
-                      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-yellow-400'>
-                        <path strokeLinecap='round' strokeLinejoin='round' d='M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.05 17.95l-1.414 1.414m12.728 0l-1.414-1.414M6.05 6.05L4.636 4.636' />
-                        <circle cx='12' cy='12' r='5' fill='currentColor' />
-                      </svg>
-                    ) : (
-                      <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-gray-700 dark:text-white'>
-                        <path strokeLinecap='round' strokeLinejoin='round' d='M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z' />
-                      </svg>
-                    )}
-                    {dark ? t('settings.lightMode') : t('settings.darkMode')}
-                  </button>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-white hover:bg-white/10 rounded-b-xl"
-                  >
-                    <FaSignOutAlt className="w-5 h-5 text-black dark:text-white" />
-                    {t('auth.signOut') || 'Sair'}
-                  </button>
-                </div>
+      <div className="w-full h-screen md:h-[90vh] md:max-w-2xl flex flex-col rounded-none md:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700">
+        <header className="p-4 md:p-4 flex justify-between items-center relative border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors"
+              aria-label={dark ? t('settings.lightMode') : t('settings.darkMode')}
+            >
+              {dark ? (
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-white'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.05 17.95l-1.414 1.414m12.728 0l-1.414-1.414M6.05 6.05L4.636 4.636' />
+                  <circle cx='12' cy='12' r='5' fill='currentColor' />
+                </svg>
+              ) : (
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-gray-900'>
+                  <path strokeLinecap='round' strokeLinejoin='round' d='M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z' />
+                </svg>
               )}
-            </div>
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors"
+              aria-label={t('auth.signOut') || 'Sair'}
+            >
+              <IoLogOutOutline className="w-5 h-5" />
+            </button>
           </div>
+          <a
+            href="https://wa.me/351966915976"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:text-green-500 dark:hover:text-green-400 text-gray-900 dark:text-gray-300 transition-colors duration-200"
+          >
+            <FaWhatsapp className="w-5 h-5" />
+            <span className="text-sm font-medium">+351 966 915 976</span>
+          </a>
         </header>
         <main
           ref={chatContainerRef}
@@ -1399,7 +1369,7 @@ const ChatComponent = () => {
           {greetingLoading ? (
             <div className="flex justify-center items-center py-8">
               <span className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></span>
-              <span className="ml-3 text-white/80">{t('chat.greetingLoading')}</span>
+              <span className="ml-3 text-gray-600 dark:text-gray-300">{t('chat.greetingLoading')}</span>
             </div>
           ) : (
             <div className="flex flex-col gap-6">
@@ -1411,11 +1381,11 @@ const ChatComponent = () => {
                   {/* Mensagem do bot para o usuário */}
                   {msg.user === 'bot' && (
                     <div className="flex flex-col items-end mr-2 justify-center">
-                      <FaRobot className="text-3xl text-white" />
+                      <FaRobot className="text-3xl text-gray-900 dark:text-gray-300" />
                     </div>
                   )}
                   <div
-                    className={`rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
+                    className={`rounded-xl p-4 border-[0.5px] border-gray-200 dark:border-white text-gray-900 dark:text-white bg-transparent max-w-[90%] md:max-w-[90%] min-w-[100px] text-base relative group ${msg.user === 'me' ? 'ml-2' : 'mr-2'}`}
                   >
                     {/* Mensagem do usuário para o bot */}
                     <div className="flex flex-col gap-2 mb-4">
@@ -1447,19 +1417,19 @@ const ChatComponent = () => {
                         {msg.user === 'bot' && (
                           <>
                             <button
-                              className={`transition-colors ${feedback[msg.id] === 'like' ? 'text-green-400' : 'text-white'} hover:text-green-400`}
+                              className={`transition-colors ${feedback[msg.id] === 'like' ? 'text-green-400' : 'text-gray-900 dark:text-white'} hover:text-green-400 dark:hover:text-green-400`}
                               onClick={() => handleFeedback(msg.id, 'like', msg.content)}
                             >
                               <FaRegThumbsUp className="text-lg" />
                             </button>
                             <button
-                              className={`transition-colors ${feedback[msg.id] === 'dislike' ? 'text-red-400' : 'text-white'} hover:text-red-400`}
+                              className={`transition-colors ${feedback[msg.id] === 'dislike' ? 'text-red-400' : 'text-gray-900 dark:text-white'} hover:text-red-400 dark:hover:text-red-400`}
                               onClick={() => handleFeedback(msg.id, 'dislike', msg.content)}
                             >
                               <FaRegThumbsDown className="text-lg" />
                             </button>
                             <button
-                              className={`hover:text-blue-300 transition-colors relative group`}
+                              className={`transition-colors relative group text-gray-900 dark:text-white`}
                               onClick={async () => {
                                 if (currentAudioId === msg.id && isPlaying) {
                                   if (audioRef.current) {
@@ -1477,17 +1447,17 @@ const ChatComponent = () => {
                                 <>
                                   {currentAudioId === msg.id ? (
                                     isPlaying ? (
-                                      <FaPause className="text-lg text-white" />
+                                      <FaPause className="text-lg" />
                                     ) : (
-                                      <FaPlay className="text-lg text-white" />
+                                      <FaPlay className="text-lg" />
                                     )
                                   ) : (
-                                    <FaVolumeUp className="text-lg text-white" />
+                                    <FaVolumeUp className="text-lg" />
                                   )}
 
                                   {/* Barra de reprodução de audio */}
                                   {currentAudioId === msg.id && (
-                                    <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-white/20">
+                                    <div className="absolute -bottom-1.3 mt-1 left-0 w-full h-0.5 bg-gray-300 dark:bg-white/20">
                                       <div
                                         className="absolute bottom-0 z-10 h-full bg-blue-400 mt-1 transition-all duration-100"
                                         style={{ width: `${audioProgress}%` }}
@@ -1497,10 +1467,10 @@ const ChatComponent = () => {
                                 </>
                               )}
                             </button>
-                            <button className="hover:text-blue-300 transition-colors" onClick={() => setCommentModal({ open: true, message: { id: msg.id, content: msg.content } })}><FaRegCommentDots className="text-lg text-white" /></button>
+                            <button className="transition-colors text-gray-900 dark:text-white" onClick={() => setCommentModal({ open: true, message: { id: msg.id, content: msg.content } })}><FaRegCommentDots className="text-lg" /></button>
                             {isPostResponse(msg.content) && (
                               <button
-                                className="hover:text-blue-300 transition-colors relative group"
+                                className="hover:text-blue-500 dark:hover:text-blue-300 transition-colors relative group text-gray-900 dark:text-white"
                                 onClick={() => handleCopyContent(msg.content, msg.id)}
                                 title={t('chat.copy') || 'Copiar'}
                               >
@@ -1510,7 +1480,7 @@ const ChatComponent = () => {
                                     <span className="text-xs text-green-400 mt-1">{t('chat.copied')}</span>
                                   </div>
                                 ) : (
-                                  <FaCopy className="text-lg text-white" />
+                                  <FaCopy className="text-lg" />
                                 )}
                               </button>
                             )}
@@ -1522,7 +1492,7 @@ const ChatComponent = () => {
                   </div>
                   {msg.user === 'me' && (
                     <div className="flex flex-col items-end ml-2 justify-center">
-                      <FaUserCircle className="text-3xl text-white" />
+                      <FaUserCircle className="text-3xl text-gray-900 dark:text-gray-300" />
                     </div>
                   )}
                 </div>
@@ -1530,9 +1500,9 @@ const ChatComponent = () => {
               {isTyping && (
                 <div className="flex justify-start">
                   <div className="flex flex-col items-end mr-2 justify-center">
-                    <FaRobot className="text-3xl text-white" />
+                    <FaRobot className="text-3xl text-gray-900 dark:text-gray-300" />
                   </div>
-                  <div className="rounded-xl p-4 border-[0.5px] border-white text-white bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group mr-2">
+                  <div className="rounded-xl p-4 border border-gray-200 dark:border-white/30 text-gray-900 dark:text-white bg-white dark:bg-transparent max-w-[98%] md:max-w-[90%] min-w-[100px] text-base relative group mr-2">
                     <TypingIndicator />
                   </div>
                 </div>
@@ -1554,10 +1524,10 @@ const ChatComponent = () => {
         </main>
         {showTooltips && tooltips.length > 0 && (
           <div className="w-full px-6">
-            <div className="w-full border-t border-white/30 mb-4" />
+            <div className="w-full border-t border-gray-200 dark:border-gray-700 mb-4" />
             <div className="flex flex-col gap-2 mb-2 items-center w-full md:hidden">
               <button
-                className="w-full flex-1 px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors text-center"
+                className="w-full flex-1 px-4 py-2 rounded-lg bg-gray-100 dark:bg-white text-gray-700 dark:text-gray-900 hover:bg-gray-300 dark:hover:bg-gray-200 transition-all duration-200 ease-in-out text-center"
                 onClick={() => setShowTooltipsModal(true)}
               >
                 Sugestões
@@ -1568,7 +1538,7 @@ const ChatComponent = () => {
                 {tooltips.slice(0, 2).map((tip, idx) => (
                   <button
                     key={idx}
-                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-white text-gray-700 dark:text-gray-900 hover:bg-gray-300 dark:hover:bg-gray-200 transition-all duration-200 ease-in-out"
                     onClick={() => handleTooltipClick(tip)}
                   >
                     {tip}
@@ -1579,7 +1549,7 @@ const ChatComponent = () => {
                 {tooltips.slice(2, 4).map((tip, idx) => (
                   <button
                     key={idx + 2}
-                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors"
+                    className="flex-1 px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-white text-gray-700 dark:text-gray-900 hover:bg-gray-300 dark:hover:bg-gray-200 transition-all duration-200 ease-in-out"
                     onClick={() => handleTooltipClick(tip)}
                   >
                     {tip}
@@ -1589,21 +1559,21 @@ const ChatComponent = () => {
             </div>
             {showTooltipsModal && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                <div className="bg-auth-gradient bg-opacity-90 rounded-2xl shadow-2xl p-6 max-w-xs w-full flex flex-col items-center border border-white/30 backdrop-blur-md relative">
+                <div className="bg-gray-200 dark:bg-white/20 rounded-2xl shadow-2xl p-6 max-w-xs w-full flex flex-col items-center border border-gray-200 dark:border-white/30 backdrop-blur-md relative">
                   <button
-                    className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
+                    className="absolute top-4 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl"
                     onClick={() => setShowTooltipsModal(false)}
                     aria-label="Close"
                     type="button"
                   >
                     &times;
                   </button>
-                  <h2 className="text-lg font-bold text-white mb-4 drop-shadow">Sugestões</h2>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Sugestões</h2>
                   <div className="flex flex-col gap-3 w-full">
                     {tooltips.slice(0, 4).map((tip, idx) => (
                       <button
                         key={idx}
-                        className="w-full px-4 py-2 rounded-lg bg-white/20 text-white/90 hover:bg-blue-400/80 transition-colors text-center"
+                        className="w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-white text-gray-700 dark:text-gray-900 hover:bg-gray-300 dark:hover:bg-gray-200 transition-all duration-200 ease-in-out text-center"
                         onClick={() => { handleTooltipClick(tip); setShowTooltipsModal(false); }}
                       >
                         {tip}
@@ -1618,22 +1588,22 @@ const ChatComponent = () => {
         <footer className="w-full p-3">
           <form
             onSubmit={handleSendMessage}
-            className="flex items-center gap-3 bg-transparent rounded-2xl px-4 py-2 shadow-md border border-white/30 relative"
+            className="flex items-center gap-3 bg-white dark:bg-transparent rounded-2xl px-4 py-2 shadow-md border border-gray-200 dark:border-gray-600 relative"
           >
             <div className="flex items-center w-full">
               <button
                 ref={emojiButtonRef}
                 type="button"
-                className="hidden md:inline-flex text-xl text-white hover:text-gray-200 mr-2"
+                className="hidden md:inline-flex p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors mr-2"
                 onClick={() => setShowEmojiPicker((v) => !v)}
                 tabIndex={-1}
               >
-                <FaRegSmile />
+                <FaRegSmile className="text-xl" />
               </button>
               <textarea
                 ref={inputRef}
                 placeholder={t('chat.typeMessage')}
-                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300 resize-none"
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => {
@@ -1650,20 +1620,20 @@ const ChatComponent = () => {
               />
               <button
                 type="submit"
-                className="text-xl text-white hover:text-gray-200 disabled:opacity-50 ml-2"
+                className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors disabled:opacity-50 ml-2"
                 disabled={!newMessage.trim() || loading}
               >
-                <FaPaperPlane />
+                <FaPaperPlane className="text-xl" />
               </button>
               <button
                 type="button"
-                className="text-xl text-white hover:text-gray-200 ml-2"
+                className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors ml-2"
                 onClick={() => {
                   setVoiceModalOpen(true);
                   setVoiceModalMode('ready-to-record');
                 }}
               >
-                <FaMicrophone />
+                <FaMicrophone className="text-xl" />
               </button>
               <input
                 type="file"
@@ -1674,7 +1644,7 @@ const ChatComponent = () => {
               />
               <button
                 type="button"
-                className="text-xl text-white hover:text-gray-200 ml-2"
+                className="p-2 rounded-full hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-300 focus:outline-none transition-colors ml-2"
                 onClick={handleImageButtonClick}
                 title="Upload Image"
                 disabled={loading}
@@ -1702,8 +1672,8 @@ const ChatComponent = () => {
               </div>
             )}
           </form>
-          <div className="w-full px-6 mb-1 mt-2">
-            <p className="text-xs text-white/60 text-center">{t('chat.disclaimer')}</p>
+          <div className="w-full px-6 mb-1 mt-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">{t('chat.disclaimer')}</p>
           </div>
         </footer>
       </div>
@@ -1735,14 +1705,14 @@ const ChatComponent = () => {
         )}
       >
         <div
-          className="bg-auth-gradient rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-white/30 shadow-2xl transform transition-all duration-200 ease-in-out"
+          className="bg-white dark:bg-gray-800 rounded-2xl p-6 flex flex-col items-center gap-4 w-[90vw] max-w-md border border-gray-200 dark:border-gray-700 shadow-2xl transform transition-all duration-200 ease-in-out"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between items-center w-full mb-2">
-            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.uploadImage') || 'Upload de Imagem'}</h2>
+          <div className="relative w-full mb-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white text-center">{t('chat.uploadImage') || 'Upload de Imagem'}</h2>
             <button
               onClick={handleImageModalClose}
-              className="text-white/70 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+              className="absolute top-0 right-0 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               aria-label={t('common.cancel') || 'Fechar'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -1752,8 +1722,8 @@ const ChatComponent = () => {
           </div>
           <div
             className={`w-full h-48 border-2 border-dashed rounded-xl flex items-center justify-center cursor-pointer transition-all duration-200 ${imagePreview
-              ? 'border-white/30 bg-white/5'
-              : 'border-white/30 bg-white/5 hover:bg-white/10'
+              ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
+              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
               }`}
             onDrop={handleImageDrop}
             onDragOver={e => e.preventDefault()}
@@ -1784,7 +1754,7 @@ const ChatComponent = () => {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2 text-white/70">
+              <div className="flex flex-col items-center gap-2 text-gray-600 dark:text-gray-300">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V7.5A2.25 2.25 0 015.25 5.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5z" />
                   <circle cx="8.25" cy="9.75" r="1.25" />
@@ -1795,11 +1765,11 @@ const ChatComponent = () => {
             )}
           </div>
           <div className="w-full">
-            <div className="flex items-center w-full bg-transparent rounded-2xl px-4 py-2 shadow-md border border-white/30">
+            <div className="flex items-center w-full bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-2 shadow-md border border-gray-200 dark:border-gray-600">
               <input
                 type="text"
                 placeholder={t('chat.typeMessage') || 'Digite uma mensagem para a imagem...'}
-                className="flex-1 bg-transparent outline-none px-2 py-2 text-white dark:text-white placeholder-gray-200 dark:placeholder-gray-300"
+                className="flex-1 bg-transparent outline-none px-2 py-2 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-300"
                 value={imageText}
                 onChange={(e) => setImageText(e.target.value)}
                 onKeyDown={(e) => {
@@ -1814,7 +1784,7 @@ const ChatComponent = () => {
           </div>
           <div className="flex gap-3 mt-4 w-full">
             <button
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={(e) => {
                 e.stopPropagation();
                 handleImageConfirm();
@@ -1824,7 +1794,7 @@ const ChatComponent = () => {
               {t('common.confirm') || 'Confirmar'}
             </button>
             <button
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-900 dark:text-white font-semibold transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 handleImageModalClose();
@@ -1858,14 +1828,14 @@ const ChatComponent = () => {
         onOverlayClick={handleImageViewerClose}
       >
         <div
-          className="relative bg-auth-gradient rounded-2xl p-4 max-w-2xl w-[90vw] border border-white/30 shadow-2xl"
+          className="relative bg-white dark:bg-gray-800 rounded-2xl p-4 max-w-2xl w-[90vw] border border-gray-200 dark:border-gray-700 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-white drop-shadow">{t('chat.imagePreview') || 'Visualização da Imagem'}</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('chat.imagePreview') || 'Visualização da Imagem'}</h2>
             <button
               onClick={handleImageViewerClose}
-              className="text-white/70 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+              className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
               aria-label={t('common.close') || 'Fechar'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
@@ -1874,7 +1844,7 @@ const ChatComponent = () => {
             </button>
           </div>
           {selectedImage && (
-            <div className="relative w-full aspect-square md:aspect-auto md:h-[60vh] bg-black/20 rounded-xl overflow-hidden">
+            <div className="relative w-full aspect-square md:aspect-auto md:h-[60vh] bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden">
               <img
                 src={selectedImage}
                 alt="Full size"
@@ -1885,7 +1855,7 @@ const ChatComponent = () => {
           <div className="mt-4 flex justify-end">
             <button
               onClick={handleImageViewerClose}
-              className="px-4 py-2 rounded-xl bg-white/20 text-white font-semibold hover:bg-white/30 transition-colors"
+              className="px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold transition-colors"
             >
               {t('common.close') || 'Fechar'}
             </button>

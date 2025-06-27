@@ -54,11 +54,11 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
       onClick={handleBackdropClick}
     >
       <div 
-        className="bg-auth-gradient bg-opacity-90 border border-white rounded-2xl p-6 w-full max-w-md backdrop-blur-md relative"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 w-full max-w-md backdrop-blur-md relative shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-white">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white text-center flex-1">
             {mode === 'ai-speaking' ? t('voice.aiSpeaking') :
              mode === 'thinking' ? t('voice.aiThinking') :
              mode === 'loading' ? t('voice.loading') :
@@ -67,14 +67,14 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
           </h2>
           <button
             onClick={onClose}
-            className="text-white/80 hover:text-white transition-colors absolute top-6 right-6"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors absolute top-6 right-6"
           >
-            <FaTimes className="text-xl text-white" />
+            <FaTimes className="text-xl" />
           </button>
         </div>
         <div className="flex flex-col items-center gap-6">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center relative overflow-visible">
+            <div className="w-40 h-40 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative overflow-visible">
               {mode === 'ai-speaking' && (
                 <>
                   <span className="absolute inset-0 rounded-full border-2 border-blue-400 animate-voice-wave1" />
@@ -82,23 +82,23 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
                 </>
               )}
               {mode === 'ai-speaking' ? (
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center z-10">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center z-10">
                   <FaVolumeUp className="text-white text-2xl" />
                 </div>
               ) : mode === 'thinking' ? (
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
                   <FaSpinner className="text-white text-2xl animate-spin" />
                 </div>
               ) : mode === 'loading' ? (
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
                   <FaSpinner className="text-white text-2xl animate-spin" />
                 </div>
               ) : mode === 'recording' ? (
-                <div className="animate-pulse w-16 h-16 rounded-full bg-red-500 flex items-center justify-center">
+                <div className="animate-pulse w-24 h-24 rounded-full bg-red-500 flex items-center justify-center">
                   <FaStop className="text-white text-2xl" />
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-full bg-blue-500 flex items-center justify-center">
+                <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center">
                   <FaMicrophone className="text-white text-2xl" />
                 </div>
               )}
@@ -107,28 +107,28 @@ const VoiceModal: React.FC<VoiceModalProps> = ({
           {(mode === 'ready-to-record' || mode === 'recording') && (
             <button
               onClick={onToggleRecord}
-              className={`px-6 py-2 rounded bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:from-purple-700 hover:to-blue-700 transition-colors duration-200 w-auto`}
+              className="px-8 py-3 rounded-xl bg-gray-200 dark:bg-white/20 text-gray-900 dark:text-white font-semibold hover:bg-gray-300 dark:hover:bg-white/30 transition-all duration-200 w-auto shadow-lg hover:shadow-xl hover:scale-105"
             >
               {mode === 'recording' ? t('voice.stop') : t('voice.start')}
             </button>
           )}
           {mode === 'ai-speaking' && (
-            <div className="text-white/80 text-center">
+            <div className="text-gray-600 dark:text-gray-300 text-center">
               {t('voice.aiSpeaking')}
             </div>
           )}
           {mode === 'thinking' && (
-            <div className="text-white/80 text-center">
+            <div className="text-gray-600 dark:text-gray-300 text-center">
               {t('voice.aiThinking')}
             </div>
           )}
           {mode === 'loading' && (
-            <div className="text-white/80 text-center">
+            <div className="text-gray-600 dark:text-gray-300 text-center">
               {t('voice.loading')}
             </div>
           )}
           {error && (
-            <div className="text-red-400 text-center mt-2 px-4">
+            <div className="text-red-500 dark:text-red-400 text-center mt-2 px-4">
               {error}
             </div>
           )}

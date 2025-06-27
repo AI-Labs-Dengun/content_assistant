@@ -100,18 +100,18 @@ export default function SignIn() {
           },
         }}
       />
-      <div className="w-full h-screen md:h-auto md:max-w-md flex flex-col justify-center md:justify-start md:pt-12 md:pb-12 rounded-none md:rounded-3xl shadow-2xl border border-white/30">
+      <div className="w-full h-screen md:h-auto md:max-w-md flex flex-col justify-center md:justify-start md:pt-12 md:pb-12 rounded-none md:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700">
         <div className="flex-1 flex flex-col justify-center px-6">
           <div className="flex flex-col gap-2 mb-2">
             <div className="flex items-center justify-between w-full">
-              <h1 className="text-3xl font-semibold text-white text-left">{t('auth.signIn')}</h1>
+              <h1 className="text-3xl font-semibold text-gray-900 dark:text-white text-left">{t('auth.signIn')}</h1>
               <button
                 onClick={toggleTheme}
-                className="md:hidden p-2 rounded-full bg-white/30 hover:bg-white/50 text-white focus:outline-none"
+                className="md:hidden p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 focus:outline-none"
                 aria-label={dark ? t('settings.lightMode') : t('settings.darkMode')}
               >
                 {dark ? (
-                  <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-yellow-400'>
+                  <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' strokeWidth={1.5} stroke='currentColor' className='w-5 h-5 text-white'>
                     <path strokeLinecap='round' strokeLinejoin='round' d='M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.05 17.95l-1.414 1.414m12.728 0l-1.414-1.414M6.05 6.05L4.636 4.636' />
                     <circle cx='12' cy='12' r='5' fill='currentColor' />
                   </svg>
@@ -122,12 +122,12 @@ export default function SignIn() {
                 )}
               </button>
             </div>
-            <p className="text-white/80 text-left text-base leading-tight w-full mb-4">{t('auth.signInWithGoogle')}</p>
+            <p className="text-gray-600 dark:text-gray-300 text-left text-base leading-tight w-full mb-4">{t('auth.signInWithGoogle')}</p>
           </div>
           
           <form className="w-full flex flex-col gap-2" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-y-1">
-              <label className="text-white/90 text-sm font-medium" htmlFor="email">{t('auth.email')}</label>
+              <label className="text-gray-700 dark:text-gray-200 text-sm font-medium" htmlFor="email">{t('auth.email')}</label>
               <input
                 id="email"
                 type="email"
@@ -139,20 +139,20 @@ export default function SignIn() {
               />
             </div>
             <div className="flex flex-col gap-y-1">
-              <label className="text-white/90 text-sm font-medium" htmlFor="password">{t('auth.password')}</label>
+              <label className="text-gray-700 dark:text-gray-200 text-sm font-medium" htmlFor="password">{t('auth.password')}</label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  className="auth-input pr-10"
+                  className="auth-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-black dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                   onClick={() => setShowPassword((v) => !v)}
                   tabIndex={-1}
                   aria-label={showPassword ? t('auth.hidePassword') || 'Hide password' : t('auth.showPassword') || 'Show password'}
@@ -171,20 +171,20 @@ export default function SignIn() {
             </button>
           </form>
           
-          <a href="/sign-up" className="mt-6 text-white/80 text-sm text-center block underline font-medium hover:text-blue-200">
+          <a href="/sign-up" className="mt-6 text-gray-600 dark:text-gray-300 text-sm text-center block underline font-medium hover:text-gray-800 dark:hover:text-gray-100">
             {t('auth.noAccount')} {t('auth.signUp')}
           </a>
         </div>
       </div>
       
       <button
-        className="hidden md:block absolute top-4 right-4 bg-white/40 rounded-full p-2 hover:bg-white/60 transition-colors"
+        className="hidden md:block absolute top-4 right-4 bg-gray-200 dark:bg-gray-700 rounded-full p-2 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         onClick={toggleTheme}
         aria-label={dark ? t('settings.lightMode') : t('settings.darkMode')}
         type="button"
       >
         {dark ? (
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-yellow-400">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-white">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M6.05 17.95l-1.414 1.414m12.728 0l-1.414-1.414M6.05 6.05L4.636 4.636" />
             <circle cx="12" cy="12" r="5" fill="currentColor" />
           </svg>
