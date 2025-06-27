@@ -503,7 +503,7 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages }),
+          body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
         
@@ -777,7 +777,8 @@ const ChatComponent = () => {
               message: data.text,
               messages: [
                 { role: 'user', content: data.text }
-              ]
+              ],
+              language
             }),
           });
           const aiData = await res.json();
@@ -1175,14 +1176,18 @@ const ChatComponent = () => {
     setIsTyping(true);
 
     let platform = selectedPlatform || extractPlatform(tooltip);
-    let topic = postTopic;
-    if (!platform) {
-      setSelectedPlatform(null);
-    } else {
+    let topic = postTopic || extractTopic(tooltip, platform);
+    
+    // If we found a platform in the tooltip but no topic, try to extract topic from the tooltip
+    if (platform && !topic) {
+      topic = extractTopic(tooltip, platform);
+    }
+    
+    // Update state based on what we found
+    if (platform) {
       setSelectedPlatform(platform);
     }
-    if (!topic && platform && !extractPlatform(tooltip)) {
-      topic = tooltip;
+    if (topic) {
       setPostTopic(topic);
     }
 
@@ -1200,7 +1205,7 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: openaiMessages }),
+          body: JSON.stringify({ messages: openaiMessages, language }),
         });
         const data = await res.json();
         
@@ -1242,7 +1247,7 @@ const ChatComponent = () => {
         const res = await fetch('/api/chatgpt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: followupPrompt }),
+          body: JSON.stringify({ message: followupPrompt, language }),
         });
         const data = await res.json();
         
@@ -1276,6 +1281,10 @@ const ChatComponent = () => {
       }
       return;
     }
+
+    // Fallback case - if none of the above conditions are met
+    setLoading(false);
+    setIsTyping(false);
   };
 
   const handleCopyContent = (content: string, messageId: string) => {
